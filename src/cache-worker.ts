@@ -22,7 +22,7 @@
 
 import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
-import { Service, wait } from './lib'
+import { wait } from './utils'
 
 export class CacheWorker {
   private grahQLClient: GraphQLClient
@@ -41,7 +41,7 @@ export class CacheWorker {
     pagination = 100,
   }: {
     apiEndpoint: string
-    service?: Service
+    service?: string
     secret?: string
     pagination?: number
   }) {

@@ -20,7 +20,6 @@
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
 import { CacheWorker } from './src/cache-worker'
-import { Service } from './src/lib'
 import { cacheKeys, pagination } from './config'
 
 start()
@@ -28,8 +27,8 @@ start()
 async function start() {
   const cacheWorker = new CacheWorker({
     apiEndpoint: process.env.SERLO_ORG_HOST as string,
-    secret: process.env.SERLO_ORG_SECRET,
-    service: process.env.SERLO_SERVICE as Service,
+    secret: process.env.SECRET,
+    service: process.env.SERVICE,
     pagination,
   })
 
