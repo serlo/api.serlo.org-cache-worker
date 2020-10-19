@@ -22,11 +22,12 @@
 import { ApolloServer } from 'apollo-server-express'
 import { GraphQLRequest } from 'apollo-server-types'
 import { graphql, rest } from 'msw'
+import dotenv from 'dotenv'
 
-import { CacheWorker } from '../cache-worker/src/cache-worker'
-import { createInMemoryCache } from '../src/cache/in-memory-cache'
-import { getGraphQLOptions } from '../src/graphql'
-import { Service } from '../src/graphql/schema/types'
+import { CacheWorker } from '../src/cache-worker'
+import { createInMemoryCache } from './api.serlo.org/src/cache/in-memory-cache'
+import { getGraphQLOptions } from './api.serlo.org/src/graphql'
+import { Service } from './api.serlo.org/src/graphql/schema/types'
 
 const mockKeysValues = new Map(
   [...Array(25).keys()].map((x) => [`de.serlo.org/api/key${x}`, `"value${x}"`])
@@ -54,6 +55,8 @@ const fakeSerloDataSourceResponses = [...mockKeysValues.keys()].map((key) => {
 const apiEndpoint = 'https://api.serlo.org/graphql'
 
 const serloApi = graphql.link(apiEndpoint)
+
+dotenv.config()
 
 beforeEach(async () => {
   await cache.set('de.serlo.org/api/cache-keys', [...mockKeysValues.keys()])

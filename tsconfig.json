@@ -2,7 +2,12 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "importHelpers": true,
+    "lib": ["esnext"],
+    "module": "commonjs",
     "moduleResolution": "node",
-    "strict": true
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2019"
   }
 }
