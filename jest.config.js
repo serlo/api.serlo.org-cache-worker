@@ -20,13 +20,12 @@
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
 module.exports = {
-  preset: 'ts-jest',
-  setupFiles: ['dotenv/config'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  testEnvironment: 'node',
-  testPathIgnorePatterns: ['/node_modules/', '/__tests__\\/api.serlo.org/'],
+  preset: "ts-jest",
+  setupFiles: ["dotenv/config"],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  testEnvironment: "node",
+  testPathIgnorePatterns: ["/node_modules/", "/__tests__\\/api.serlo.org/"],
   transform: {
-    '^.+\\.graphql$': 'jest-transform-graphql',
+    "^.+\\.graphql$": "jest-transform-graphql",
   },
-}
-  
+};

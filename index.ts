@@ -19,55 +19,49 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-import { CacheWorker } from './src/cache-worker'
-import { cacheKeys, pagination } from './config'
+import cacheKeys from "./cache-keys.json";
+import { CacheWorker } from "./src/cache-worker";
 
-start()
+start();
 
-async function start() {
+function start() {
   const cacheWorker = new CacheWorker({
-    apiEndpoint: process.env.SERLO_ORG_HOST as string,
+    apiEndpoint: process.env.SERLO_ORG_HOST,
     secret: process.env.SECRET,
     service: process.env.SERVICE,
-    pagination,
-  })
+    pagination: parseInt(process.env.PAGINATION as string),
+  });
 
-  console.log('Updating cache values of the following keys:', cacheKeys)
+  console.log("Updating cache values of the following keys:", cacheKeys);
 
-  run(
-    {
-      cacheWorker,
-      cacheKeys,
-    },
-    0
-  )
+  run({
+    cacheWorker,
+    cacheKeys,
+  });
 }
 
-type Config = {
-  cacheWorker: CacheWorker
-  cacheKeys: string[]
+interface Config {
+  cacheWorker: CacheWorker;
+  cacheKeys: string[];
 }
 
-async function run(config: Config, retries: number = 2) {
-  const { cacheWorker, cacheKeys } = config
-  await cacheWorker.update(cacheKeys!)
-  const IsSuccessful = checkSuccess(cacheWorker.errLog)
-  if (!IsSuccessful) {
-    declareFailure(cacheWorker.errLog)
+async function run(config: Config): Promise<void> {
+  const { cacheWorker, cacheKeys } = config;
+  await cacheWorker.update(cacheKeys);
+  if (cacheWorker.hasFailed()) {
+    declareFailure(cacheWorker.errorLog);
+    return;
   }
+  declareSuccess();
 }
 
 function declareFailure(errors: Error[]) {
   console.warn(
-    'Cache update was run but the following errors were found',
+    "Cache update was run but the following errors were found",
     errors
-  )
+  );
 }
 
-function checkSuccess(errLog: Error[]) {
-  if (errLog == []) {
-    console.log('Cache successfully updated')
-    return true
-  }
-  return false
+function declareSuccess() {
+  console.log("Cache successfully updated");
 }

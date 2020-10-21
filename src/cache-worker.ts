@@ -20,19 +20,21 @@
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
 
-import { GraphQLClient, gql } from 'graphql-request'
-import jwt from 'jsonwebtoken'
-import { wait } from './utils'
+import { GraphQLResponse } from "apollo-server-types";
+import { GraphQLClient, gql } from "graphql-request";
+import jwt from "jsonwebtoken";
+
+import { wait } from "./utils";
 
 export class CacheWorker {
-  private grahQLClient: GraphQLClient
+  private grahQLClient: GraphQLClient;
 
-  private updateCacheRequest = ''
+  private updateCacheRequest = "";
 
-  public okLog: { data: any; http: any }[] = []
-  public errLog: Error[] = []
+  public okLog: GraphQLResponse[] = [];
+  public errorLog: Error[] = [];
 
-  private pagination: number
+  private pagination: number;
 
   public constructor({
     apiEndpoint,
@@ -40,10 +42,10 @@ export class CacheWorker {
     secret,
     pagination = 100,
   }: {
-    apiEndpoint: string
-    service?: string
-    secret?: string
-    pagination?: number
+    apiEndpoint: string;
+    service?: string;
+    secret?: string;
+    pagination?: number;
   }) {
     this.grahQLClient = new GraphQLClient(
       apiEndpoint,
@@ -52,24 +54,24 @@ export class CacheWorker {
         : {
             headers: {
               Authorization: `Serlo Service=${jwt.sign({}, secret, {
-                expiresIn: '2h',
-                audience: 'api.serlo.org',
+                expiresIn: "2h",
+                audience: "api.serlo.org",
                 issuer: service,
               })}`,
             },
           }
-    )
-    this.pagination = pagination
+    );
+    this.pagination = pagination;
   }
 
   public getUpdateCacheRequest(): string {
-    return this.updateCacheRequest
+    return this.updateCacheRequest;
   }
 
   public async update(keys: string[]): Promise<void> {
-    const cacheKeys = this.putInDoubleQuotes(keys)
-    const keysBlocks = this.splitKeysIntoBlocks(cacheKeys)
-    await this.requestUpdateByBlocksOfKeys(keysBlocks)
+    const cacheKeys = this.putInDoubleQuotes(keys);
+    const keysBlocks = this.splitKeysIntoBlocks(cacheKeys);
+    await this.requestUpdateByBlocksOfKeys(keysBlocks);
   }
 
   /**
@@ -80,23 +82,23 @@ export class CacheWorker {
    * explicitly between double quotes
    */
   private putInDoubleQuotes(arr: string[]): string[] {
-    return arr.map((e) => `"${e}"`)
+    return arr.map((e) => `"${e}"`);
   }
 
   private splitKeysIntoBlocks(keys: string[]): string[][] {
-    let blocksOfKeys: string[][] = []
+    const blocksOfKeys: string[][] = [];
     while (keys.length) {
-      const temp = keys.splice(0, this.pagination)
-      blocksOfKeys.push(temp)
+      const temp = keys.splice(0, this.pagination);
+      blocksOfKeys.push(temp);
     }
-    return blocksOfKeys
+    return blocksOfKeys;
   }
 
   private async requestUpdateByBlocksOfKeys(keysBlocks: string[][]) {
-    for (let block of keysBlocks) {
-      this.setUpdateCacheRequest(block)
-      const updateCachePromise = this.requestUpdateCache()
-      await this.handleError(updateCachePromise)
+    for (const block of keysBlocks) {
+      this.setUpdateCacheRequest(block);
+      const updateCachePromise = this.requestUpdateCache();
+      await this.handleError(updateCachePromise);
     }
   }
 
@@ -105,39 +107,39 @@ export class CacheWorker {
       mutation _updateCache {
         _updateCache(keys: [${cacheKeys}])
       }
-    `
+    `;
   }
 
-  private async requestUpdateCache(): Promise<any> {
-    return this.grahQLClient.request(this.updateCacheRequest)
+  private async requestUpdateCache(): Promise<GraphQLResponse> {
+    return this.grahQLClient.request(this.updateCacheRequest);
   }
 
-  private async handleError(updateCachePromise: Promise<any>) {
+  private async handleError(updateCachePromise: Promise<GraphQLResponse>) {
     await updateCachePromise
-      .then(async (res: any) => {
-        if (res.errors) {
-          await this.retry()
+      .then(async (graphQLResponse) => {
+        if (graphQLResponse.errors) {
+          await this.retry();
         }
-        this.fillLogs(res)
+        this.fillLogs(graphQLResponse);
       })
-      .catch(async (err: any) => {
-        await this.retry()
-        this.fillLogs(err)
-      })
+      .catch(async (error: Error) => {
+        await this.retry();
+        this.fillLogs(error);
+      });
   }
 
   private async retry() {
-    let keepTrying = true
-    const MAX_RETRIES = 4
+    let keepTrying = true;
+    const MAX_RETRIES = 4;
     for (let i = 0; keepTrying; i++) {
       try {
-        const res = await this.requestUpdateCache()
-        if (!res.errors || i === MAX_RETRIES) {
-          keepTrying = false
+        const graphQLResponse = await this.requestUpdateCache();
+        if (!graphQLResponse.errors || i === MAX_RETRIES) {
+          keepTrying = false;
         }
       } catch (e) {
         if (i === MAX_RETRIES) {
-          keepTrying = false
+          keepTrying = false;
         }
       }
       // TODO: uncomment when timeout of jest is configured
@@ -146,11 +148,18 @@ export class CacheWorker {
     }
   }
 
-  private fillLogs(response: any): void {
-    if (response instanceof Error || response.errors) {
-      this.errLog.push(response)
-      return
+  private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
+    if (graphQLResponse instanceof Error || graphQLResponse.errors) {
+      this.errorLog.push(graphQLResponse as Error);
+      return;
     }
-    this.okLog.push(response)
+    this.okLog.push(graphQLResponse);
+  }
+
+  public hasFailed(): boolean {
+    if (this.errorLog !== []) {
+      return true;
+    }
+    return false;
   }
 }

@@ -14,7 +14,7 @@ RUN yarn --frozen-lockfile --production=true --silent
 FROM dev-dependencies as build
 COPY src src
 COPY index.ts .
-COPY config.ts .
+COPY cache-keys.json .
 RUN yarn build
 
 FROM prod-dependencies as release

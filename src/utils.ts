@@ -23,7 +23,7 @@
 export async function wait(seconds = 1) {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve()
-    }, seconds * 1000)
-  })
+      resolve();
+    }, seconds * 1000);
+  });
 }
