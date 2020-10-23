@@ -21,6 +21,7 @@
  */
 
 import { GraphQLResponse } from "apollo-server-types";
+import { GraphQLError } from "graphql";
 import { GraphQLClient, gql } from "graphql-request";
 import jwt from "jsonwebtoken";
 
@@ -28,8 +29,6 @@ import { wait } from "./utils";
 
 export class CacheWorker {
   private grahQLClient: GraphQLClient;
-
-  private updateCacheRequest = "";
 
   public okLog: GraphQLResponse[] = [];
   public errorLog: Error[] = [];
@@ -64,31 +63,15 @@ export class CacheWorker {
     this.pagination = pagination;
   }
 
-  public getUpdateCacheRequest(): string {
-    return this.updateCacheRequest;
-  }
-
   public async update(keys: string[]): Promise<void> {
-    const cacheKeys = this.putInDoubleQuotes(keys);
-    const keysBlocks = this.splitKeysIntoBlocks(cacheKeys);
+    const keysBlocks = this.splitKeysIntoBlocks(keys, this.pagination);
     await this.requestUpdateByBlocksOfKeys(keysBlocks);
   }
 
-  /**
-   * putInDoubleQuotes puts items of a string array between double quotes
-   *
-   * It seems GraphQL doesn't recognize JS strings as strings,
-   * that is why it is necessary to put them
-   * explicitly between double quotes
-   */
-  private putInDoubleQuotes(arr: string[]): string[] {
-    return arr.map((e) => `"${e}"`);
-  }
-
-  private splitKeysIntoBlocks(keys: string[]): string[][] {
+  private splitKeysIntoBlocks(keys: string[], pagination: number): string[][] {
     const blocksOfKeys: string[][] = [];
     while (keys.length) {
-      const temp = keys.splice(0, this.pagination);
+      const temp = keys.splice(0, pagination);
       blocksOfKeys.push(temp);
     }
     return blocksOfKeys;
@@ -96,44 +79,46 @@ export class CacheWorker {
 
   private async requestUpdateByBlocksOfKeys(keysBlocks: string[][]) {
     for (const block of keysBlocks) {
-      this.setUpdateCacheRequest(block);
-      const updateCachePromise = this.requestUpdateCache();
-      await this.handleError(updateCachePromise);
+      const updateCachePromise = this.requestUpdateCache(block);
+      await this.handleError(updateCachePromise, block);
     }
   }
 
-  private setUpdateCacheRequest(cacheKeys: string[]) {
-    this.updateCacheRequest = gql`
-      mutation _updateCache {
-        _updateCache(keys: [${cacheKeys}])
+  private async requestUpdateCache(
+    cacheKeys: string[]
+  ): Promise<GraphQLResponse> {
+    const query = gql`
+      mutation _updateCache($cacheKeys: [String!]!) {
+        _updateCache(keys: $cacheKeys)
       }
     `;
+    const variables = cacheKeys;
+    return this.grahQLClient.request(query, variables);
   }
 
-  private async requestUpdateCache(): Promise<GraphQLResponse> {
-    return this.grahQLClient.request(this.updateCacheRequest);
-  }
-
-  private async handleError(updateCachePromise: Promise<GraphQLResponse>) {
+  private async handleError(
+    updateCachePromise: Promise<GraphQLResponse>,
+    currentKeys: string[]
+  ) {
     await updateCachePromise
       .then(async (graphQLResponse) => {
         if (graphQLResponse.errors) {
-          await this.retry();
+          await this.retry(currentKeys);
         }
         this.fillLogs(graphQLResponse);
       })
-      .catch(async (error: Error) => {
-        await this.retry();
+      .catch(async (error: GraphQLError) => {
+        await this.retry(currentKeys);
         this.fillLogs(error);
       });
   }
 
-  private async retry() {
+  private async retry(currentKeys: string[]) {
     let keepTrying = true;
     const MAX_RETRIES = 4;
     for (let i = 0; keepTrying; i++) {
       try {
-        const graphQLResponse = await this.requestUpdateCache();
+        const graphQLResponse = await this.requestUpdateCache(currentKeys);
         if (!graphQLResponse.errors || i === MAX_RETRIES) {
           keepTrying = false;
         }
@@ -142,9 +127,9 @@ export class CacheWorker {
           keepTrying = false;
         }
       }
-      // TODO: uncomment when timeout of jest is configured
+      // TODO: make longer than 0 when timeout of jest is configured
       // to be longer than 5000 ms for the tests of this module
-      // await wait(1)
+      await wait(0)
     }
   }
 

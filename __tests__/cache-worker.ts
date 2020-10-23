@@ -19,7 +19,7 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-import { graphql, rest } from "msw";
+import { graphql } from "msw";
 
 import { CacheWorker } from "../src/cache-worker";
 
@@ -78,7 +78,7 @@ describe("Update-cache worker", () => {
   test("does not crash if a cache value does not get updated for some reason", async () => {
     global.server.use(
       serloApi.mutation("_updateCache", async (req, res, ctx) => {
-        if (req.body?.query.includes("key20")) {
+        if (req.body?.variables!.includes("de.serlo.org/api/key20")) {
           return res(
             ctx.errors([
               {
