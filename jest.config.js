@@ -24,7 +24,7 @@ module.exports = {
   setupFiles: ["dotenv/config"],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   testEnvironment: "node",
-  testPathIgnorePatterns: ["/node_modules/", "/__tests__\\/api.serlo.org/"],
+  testPathIgnorePatterns: ["/node_modules/"],
   transform: {
     "^.+\\.graphql$": "jest-transform-graphql",
   },
