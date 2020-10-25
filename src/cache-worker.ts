@@ -64,22 +64,23 @@ export class CacheWorker {
   }
 
   public async update(keys: string[]): Promise<void> {
-    const keysBlocks = this.splitKeysIntoBlocks(keys, this.pagination);
+    const keysBlocks = this.splitUpKeysIntoChunks(keys, this.pagination);
     await this.requestUpdateByBlocksOfKeys(keysBlocks);
   }
 
-  private splitKeysIntoBlocks(keys: string[], pagination: number): string[][] {
+  // TODO: change return type to queue
+  private splitUpKeysIntoChunks(keys: string[], pagination: number): string[][] {
     const keysClone = [...keys];
-    const blocksOfKeys: string[][] = [];
+    const chunksOfKeys: string[][] = [];
     while (keysClone.length) {
       const temp = keysClone.splice(0, pagination);
-      blocksOfKeys.push(temp);
+      chunksOfKeys.push(temp);
     }
-    return blocksOfKeys;
+    return chunksOfKeys;
   }
 
-  private async requestUpdateByBlocksOfKeys(keysBlocks: string[][]) {
-    for (const block of keysBlocks) {
+  private async requestUpdateByBlocksOfKeys(chunksOfKeys: string[][]) {
+    for (const block of chunksOfKeys) {
       const updateCachePromise = this.requestUpdateCache(block);
       await this.handleError(updateCachePromise, block);
     }
@@ -133,6 +134,8 @@ export class CacheWorker {
       await wait(0);
     }
   }
+
+  // TODO: bisect()
 
   private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
     if (graphQLResponse instanceof Error || graphQLResponse.errors) {

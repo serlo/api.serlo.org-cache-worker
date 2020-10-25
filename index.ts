@@ -26,7 +26,7 @@ start();
 
 function start() {
   const cacheWorker = new CacheWorker({
-    apiEndpoint: process.env.SERLO_ORG_HOST,
+    apiEndpoint: process.env.SERLO_ORG_HOST as string,
     secret: process.env.SECRET,
     service: process.env.SERVICE,
     pagination: parseInt(process.env.PAGINATION as string),
@@ -55,6 +55,8 @@ async function run(config: Config): Promise<void> {
   declareSuccess();
 }
 
+// TODO: at declare* accept writer as param, in order to enable
+// writing to a log file.
 function declareFailure(errors: Error[]) {
   console.warn(
     "Cache update was run but the following errors were found",

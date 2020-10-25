@@ -2,7 +2,7 @@
 
 <img src="https://assets.serlo.org/meta/logo.png" alt="Serlo logo" title="Serlo" align="right" height="60" />
 
-This repo defines the cache worker for updating the cache of Serlos Graphql API. 
+This repo defines the cache worker for updating the cache of Serlos Graphql API.
 
 ## Development
 
