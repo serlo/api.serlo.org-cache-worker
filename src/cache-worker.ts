@@ -69,9 +69,10 @@ export class CacheWorker {
   }
 
   private splitKeysIntoBlocks(keys: string[], pagination: number): string[][] {
+    const keysClone = [...keys];
     const blocksOfKeys: string[][] = [];
-    while (keys.length) {
-      const temp = keys.splice(0, pagination);
+    while (keysClone.length) {
+      const temp = keysClone.splice(0, pagination);
       blocksOfKeys.push(temp);
     }
     return blocksOfKeys;
@@ -129,7 +130,7 @@ export class CacheWorker {
       }
       // TODO: make longer than 0 when timeout of jest is configured
       // to be longer than 5000 ms for the tests of this module
-      await wait(0)
+      await wait(0);
     }
   }
 

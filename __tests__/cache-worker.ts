@@ -23,8 +23,8 @@ import { graphql } from "msw";
 
 import { CacheWorker } from "../src/cache-worker";
 
-const mockKeysValues = new Map(
-  [...Array(25).keys()].map((x) => [`de.serlo.org/api/key${x}`, `"value${x}"`])
+const fakeCacheKeys = [...Array(25).keys()].map(
+  (x) => `de.serlo.org/api/key${x}`
 );
 
 let cacheWorker: CacheWorker;
@@ -33,7 +33,7 @@ const apiEndpoint = "https://api.serlo.org/graphql";
 
 const serloApi = graphql.link(apiEndpoint);
 
-beforeEach(async () => {
+beforeEach(() => {
   cacheWorker = new CacheWorker({
     apiEndpoint: apiEndpoint,
     service: "Cache Service",
@@ -42,7 +42,7 @@ beforeEach(async () => {
   });
 
   global.server.use(
-    serloApi.mutation("_updateCache", async (_req, res, ctx) => {
+    serloApi.mutation("_updateCache", (_req, res, ctx) => {
       return res(
         ctx.data(
           { http: { headers: {} }, data: { _updateCache: null } } // successful response
@@ -54,12 +54,12 @@ beforeEach(async () => {
 
 describe("Update-cache worker", () => {
   test("successfully calls _updateCache", async () => {
-    await cacheWorker.update([...mockKeysValues.keys()]);
+    await cacheWorker.update(fakeCacheKeys);
     expect(cacheWorker.errorLog).toEqual([]);
   });
   test("does not crash if _updateCache does not work", async () => {
     global.server.use(
-      serloApi.mutation("_updateCache", async (_req, res, ctx) => {
+      serloApi.mutation("_updateCache", (_req, res, ctx) => {
         return res(
           ctx.errors([
             {
@@ -69,7 +69,7 @@ describe("Update-cache worker", () => {
         );
       })
     );
-    await cacheWorker.update([...mockKeysValues.keys()]);
+    await cacheWorker.update([...fakeCacheKeys]);
     expect(cacheWorker.errorLog[0].message).toContain(
       "Something went wrong at _updateCache, but be cool"
     );
@@ -77,7 +77,7 @@ describe("Update-cache worker", () => {
   });
   test("does not crash if a cache value does not get updated for some reason", async () => {
     global.server.use(
-      serloApi.mutation("_updateCache", async (req, res, ctx) => {
+      serloApi.mutation("_updateCache", (req, res, ctx) => {
         if (req.body?.variables!.includes("de.serlo.org/api/key20")) {
           return res(
             ctx.errors([
@@ -93,7 +93,7 @@ describe("Update-cache worker", () => {
         );
       })
     );
-    await cacheWorker.update([...mockKeysValues.keys()]);
+    await cacheWorker.update([...fakeCacheKeys]);
     expect(cacheWorker.errorLog[0].message).toContain(
       'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
     );
@@ -109,7 +109,7 @@ describe("Update-cache worker", () => {
   });
   test("does not crash even though it had a problem with some values", async () => {
     global.server.use(
-      serloApi.mutation("_updateCache", async (req, res, ctx) => {
+      serloApi.mutation("_updateCache", (req, res, ctx) => {
         return res(
           ctx.errors([
             {
