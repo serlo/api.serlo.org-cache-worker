@@ -80,9 +80,9 @@ export class CacheWorker {
   }
 
   private async requestUpdateByBlocksOfKeys(chunksOfKeys: string[][]) {
-    for (const block of chunksOfKeys) {
-      const updateCachePromise = this.requestUpdateCache(block);
-      await this.handleError(updateCachePromise, block);
+    for (const chunk of chunksOfKeys) {
+      const updateCachePromise = this.requestUpdateCache(chunk);
+      await this.handleError(updateCachePromise, chunk);
     }
   }
 

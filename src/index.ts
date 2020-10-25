@@ -20,7 +20,7 @@
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
 import cacheKeys from "./cache-keys.json";
-import { CacheWorker } from "./src/cache-worker";
+import { CacheWorker } from "./cache-worker";
 
 start();
 

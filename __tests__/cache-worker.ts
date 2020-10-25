@@ -127,4 +127,6 @@ describe("Update-cache worker", () => {
     ]);
     expect(cacheWorker.errorLog).not.toEqual([]);
   });
+
+  // TODO: add test for pagination
 });
