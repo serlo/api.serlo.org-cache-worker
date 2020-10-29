@@ -12,6 +12,7 @@
     "format": "npm-run-all -c format:*",
     "format:eslint": "yarn _eslint --fix",
     "format:prettier": "yarn _prettier --write",
+    "license": "ts-node scripts/license-headers",
     "test": "jest"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@serlo/api": "^0.10.0",
+    "@splish-me/copyright-headers": "^0.0.2",
     "@types/jest": "^26.0.0",
     "@types/jsonwebtoken": "^8.0.0",
     "@types/node": "^14.0.0",
