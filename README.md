@@ -15,5 +15,6 @@ This repository defines the cache worker for updating the cache of Serlo's Graph
 - `src/` defines the cache worker
 
 ## Configuration
+
 - edit `src/cache-keys.json` to set the keys you want to update.
 - Set environment variable PAGINATION (integer) to determine how many keys are going to be updated at each call.

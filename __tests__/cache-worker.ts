@@ -19,66 +19,67 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-import { graphql } from "msw";
+import { graphql } from 'msw'
 
-import { CacheWorker } from "../src/cache-worker";
+import { CacheWorker } from '../src/cache-worker'
 
 const fakeCacheKeys = [...Array(25).keys()].map(
   (x) => `de.serlo.org/api/key${x}`
-);
+)
 
-let cacheWorker: CacheWorker;
+let cacheWorker: CacheWorker
 
-const apiEndpoint = "https://api.serlo.org/graphql";
+const apiEndpoint = 'https://api.serlo.org/graphql'
 
-const serloApi = graphql.link(apiEndpoint);
+const serloApi = graphql.link(apiEndpoint)
 
 beforeEach(() => {
   cacheWorker = new CacheWorker({
     apiEndpoint: apiEndpoint,
-    service: "Cache Service",
-    secret: "blllkjadf",
+    service: 'Cache Service',
+    secret: 'blllkjadf',
     pagination: 10, // default is 100, 10 is just for making less overhead by testing
-  });
+  })
 
   global.server.use(
-    serloApi.mutation("_updateCache", (_req, res, ctx) => {
+    serloApi.mutation('_updateCache', (_req, res, ctx) => {
       return res(
         ctx.data(
           { http: { headers: {} }, data: { _updateCache: null } } // successful response
         )
-      );
+      )
     })
-  );
-});
+  )
+})
 
-describe("Update-cache worker", () => {
-  test("successfully calls _updateCache", async () => {
-    await cacheWorker.update(fakeCacheKeys);
-    expect(cacheWorker.errorLog).toEqual([]);
-  });
-  test("does not crash if _updateCache does not work", async () => {
+describe('Update-cache worker', () => {
+  test('successfully calls _updateCache', async () => {
+    await cacheWorker.update(fakeCacheKeys)
+    expect(cacheWorker.errorLog).toEqual([])
+  })
+  test('does not crash if _updateCache does not work', async () => {
     global.server.use(
-      serloApi.mutation("_updateCache", (_req, res, ctx) => {
+      serloApi.mutation('_updateCache', (_req, res, ctx) => {
         return res(
           ctx.errors([
             {
-              message: "Something went wrong at _updateCache, but be cool",
+              message: 'Something went wrong at _updateCache, but be cool',
             },
           ])
-        );
+        )
       })
-    );
-    await cacheWorker.update([...fakeCacheKeys]);
+    )
+    await cacheWorker.update([...fakeCacheKeys])
     expect(cacheWorker.errorLog[0].message).toContain(
-      "Something went wrong at _updateCache, but be cool"
-    );
-    expect(cacheWorker.okLog.length).toEqual(0);
-  });
-  test("does not crash if a cache value does not get updated for some reason", async () => {
+      'Something went wrong at _updateCache, but be cool'
+    )
+    expect(cacheWorker.okLog.length).toEqual(0)
+  })
+  test('does not crash if a cache value does not get updated for some reason', async () => {
     global.server.use(
-      serloApi.mutation("_updateCache", (req, res, ctx) => {
-        if (req.body?.variables!.includes("de.serlo.org/api/key20")) {
+      serloApi.mutation('_updateCache', (req, res, ctx) => {
+        /* eslint-disable @typescript-eslint/no-unsafe-call */
+        if (req.body?.variables!.includes('de.serlo.org/api/key20')) {
           return res(
             ctx.errors([
               {
@@ -86,47 +87,47 @@ describe("Update-cache worker", () => {
                   'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm',
               },
             ])
-          );
+          )
         }
         return res(
           ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
-        );
+        )
       })
-    );
-    await cacheWorker.update([...fakeCacheKeys]);
+    )
+    await cacheWorker.update([...fakeCacheKeys])
     expect(cacheWorker.errorLog[0].message).toContain(
       'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
-    );
-  });
-  test("successfully updates only some values", async () => {
+    )
+  })
+  test('successfully updates only some values', async () => {
     await cacheWorker.update([
-      "de.serlo.org/api/key0",
-      "de.serlo.org/api/key7",
-      "de.serlo.org/api/key10",
-      "de.serlo.org/api/key20",
-    ]);
-    expect(cacheWorker.errorLog).toEqual([]);
-  });
-  test("does not crash even though it had a problem with some values", async () => {
+      'de.serlo.org/api/key0',
+      'de.serlo.org/api/key7',
+      'de.serlo.org/api/key10',
+      'de.serlo.org/api/key20',
+    ])
+    expect(cacheWorker.errorLog).toEqual([])
+  })
+  test('does not crash even though it had a problem with some values', async () => {
     global.server.use(
-      serloApi.mutation("_updateCache", (req, res, ctx) => {
+      serloApi.mutation('_updateCache', (req, res, ctx) => {
         return res(
           ctx.errors([
             {
-              message: "keyInexistent is not a valid key",
+              message: 'keyInexistent is not a valid key',
             },
           ])
-        );
+        )
       })
-    );
+    )
     await cacheWorker.update([
-      "de.serlo.org/api/key0",
-      "de.serlo.org/api/keyInexistent",
-      "de.serlo.org/api/key10",
-      "de.serlo.org/api/keyWrong",
-    ]);
-    expect(cacheWorker.errorLog).not.toEqual([]);
-  });
+      'de.serlo.org/api/key0',
+      'de.serlo.org/api/keyInexistent',
+      'de.serlo.org/api/key10',
+      'de.serlo.org/api/keyWrong',
+    ])
+    expect(cacheWorker.errorLog).not.toEqual([])
+  })
 
   // TODO: add test for pagination
-});
+})

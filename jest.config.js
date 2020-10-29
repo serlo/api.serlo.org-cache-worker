@@ -19,13 +19,14 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
+/* eslint-disable @typescript-eslint/no-var-requires,import/no-commonjs */
 module.exports = {
-  preset: "ts-jest",
-  setupFiles: ["dotenv/config"],
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
-  testEnvironment: "node",
-  testPathIgnorePatterns: ["/node_modules/"],
+  preset: 'ts-jest',
+  setupFiles: ['dotenv/config'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  testEnvironment: 'node',
+  testPathIgnorePatterns: ['/node_modules/'],
   transform: {
-    "^.+\\.graphql$": "jest-transform-graphql",
+    '^.+\\.graphql$': 'jest-transform-graphql',
   },
-};
+}

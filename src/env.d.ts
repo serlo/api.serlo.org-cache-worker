@@ -19,11 +19,11 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-
-export async function wait(seconds = 1) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve()
-    }, seconds * 1000)
-  })
+declare namespace NodeJS {
+  interface ProcessEnv {
+    SERLO_ORG_HOST: string
+    SECRET: string
+    SERVICE: string
+    PAGINATION: number | undefined
+  }
 }

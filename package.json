@@ -8,11 +8,10 @@
   "scripts": {
     "_eslint": "eslint \"{{__tests__,src}/**/*,*}.{js,ts}\"",
     "_prettier": "prettier .",
-    "build": "tsdx build --target node",
+    "build": "tsdx build --target node --format cjs --tsconfig tsconfig.prod.json",
     "format": "npm-run-all -c format:*",
     "format:eslint": "yarn _eslint --fix",
     "format:prettier": "yarn _prettier --write",
-    "setup": "yarn install && git submodule update --remote --merge && cd __tests__/api.serlo.org && yarn install",
     "test": "jest"
   },
   "dependencies": {
