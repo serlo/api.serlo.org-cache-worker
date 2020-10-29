@@ -9,6 +9,7 @@
     "_eslint": "eslint \"{{__tests__,src}/**/*,*}.{js,ts}\"",
     "_prettier": "prettier .",
     "build": "tsdx build --target node --format cjs --tsconfig tsconfig.prod.json",
+    "deploy:image": "ts-node scripts/deploy",
     "format": "npm-run-all -c format:*",
     "format:eslint": "yarn _eslint --fix",
     "format:prettier": "yarn _prettier --write",
