@@ -19,45 +19,49 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-import { CacheWorker } from './src/cache-worker'
-import { Service } from './src/lib'
-import { cacheKeys, pagination } from './config'
+/* eslint-disable import/extensions */
+import cacheKeys from './cache-keys.json'
+import { CacheWorker } from './cache-worker'
+
+// TODO: add tests to index.ts
 
 start()
 
-async function start() {
+function start() {
   const cacheWorker = new CacheWorker({
-    apiEndpoint: process.env.SERLO_ORG_HOST as string,
-    secret: process.env.SERLO_ORG_SECRET,
-    service: process.env.SERLO_SERVICE as Service,
-    pagination,
+    apiEndpoint: process.env.SERLO_ORG_HOST,
+    secret: process.env.SECRET,
+    service: process.env.SERVICE,
+    pagination: process.env.PAGINATION,
   })
 
   console.log('Updating cache values of the following keys:', cacheKeys)
 
-  run(
-    {
-      cacheWorker,
-      cacheKeys,
-    },
-    0
-  )
+  // TODO: maybe enable this eslint rule this check and fix it properly
+  /* eslint-disable @typescript-eslint/no-floating-promises */
+  run({
+    cacheWorker,
+    cacheKeys,
+  })
 }
 
-type Config = {
+interface Config {
   cacheWorker: CacheWorker
   cacheKeys: string[]
 }
 
-async function run(config: Config, retries: number = 2) {
+async function run(config: Config): Promise<void> {
   const { cacheWorker, cacheKeys } = config
-  await cacheWorker.update(cacheKeys!)
-  const IsSuccessful = checkSuccess(cacheWorker.errLog)
-  if (!IsSuccessful) {
-    declareFailure(cacheWorker.errLog)
+  await cacheWorker.update(cacheKeys)
+  if (cacheWorker.hasFailed()) {
+    declareFailure(cacheWorker.errorLog)
+    return
   }
+  declareSuccess()
 }
 
+// TODO: at declare* accept writer as param, in order to enable
+// writing to a log file.
 function declareFailure(errors: Error[]) {
   console.warn(
     'Cache update was run but the following errors were found',
@@ -65,10 +69,6 @@ function declareFailure(errors: Error[]) {
   )
 }
 
-function checkSuccess(errLog: Error[]) {
-  if (errLog == []) {
-    console.log('Cache successfully updated')
-    return true
-  }
-  return false
+function declareSuccess() {
+  console.log('Cache successfully updated')
 }

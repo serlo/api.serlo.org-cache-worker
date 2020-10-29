@@ -4,8 +4,8 @@
     "esModuleInterop": true,
     "importHelpers": true,
     "lib": ["esnext"],
-    "module": "commonjs",
     "moduleResolution": "node",
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "es2019"

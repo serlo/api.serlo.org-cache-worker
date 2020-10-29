@@ -19,18 +19,19 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-
+/* eslint-disable import/no-extraneous-dependencies*/
+import { GraphQLResponse } from 'apollo-server-types'
+import { GraphQLError } from 'graphql'
 import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
-import { Service, wait } from './lib'
+
+import { wait } from './utils'
 
 export class CacheWorker {
   private grahQLClient: GraphQLClient
 
-  private updateCacheRequest = ''
-
-  public okLog: { data: any; http: any }[] = []
-  public errLog: Error[] = []
+  public okLog: GraphQLResponse[] = []
+  public errorLog: Error[] = []
 
   private pagination: number
 
@@ -41,7 +42,7 @@ export class CacheWorker {
     pagination = 100,
   }: {
     apiEndpoint: string
-    service?: Service
+    service?: string
     secret?: string
     pagination?: number
   }) {
@@ -62,77 +63,68 @@ export class CacheWorker {
     this.pagination = pagination
   }
 
-  public getUpdateCacheRequest(): string {
-    return this.updateCacheRequest
-  }
-
   public async update(keys: string[]): Promise<void> {
-    const cacheKeys = this.putInDoubleQuotes(keys)
-    const keysBlocks = this.splitKeysIntoBlocks(cacheKeys)
+    const keysBlocks = this.splitUpKeysIntoChunks(keys, this.pagination)
     await this.requestUpdateByBlocksOfKeys(keysBlocks)
   }
 
-  /**
-   * putInDoubleQuotes puts items of a string array between double quotes
-   *
-   * It seems GraphQL doesn't recognize JS strings as strings,
-   * that is why it is necessary to put them
-   * explicitly between double quotes
-   */
-  private putInDoubleQuotes(arr: string[]): string[] {
-    return arr.map((e) => `"${e}"`)
-  }
-
-  private splitKeysIntoBlocks(keys: string[]): string[][] {
-    let blocksOfKeys: string[][] = []
-    while (keys.length) {
-      const temp = keys.splice(0, this.pagination)
-      blocksOfKeys.push(temp)
+  // TODO: change return type to queue
+  private splitUpKeysIntoChunks(
+    keys: string[],
+    pagination: number
+  ): string[][] {
+    const keysClone = [...keys]
+    const chunksOfKeys: string[][] = []
+    while (keysClone.length) {
+      const temp = keysClone.splice(0, pagination)
+      chunksOfKeys.push(temp)
     }
-    return blocksOfKeys
+    return chunksOfKeys
   }
 
-  private async requestUpdateByBlocksOfKeys(keysBlocks: string[][]) {
-    for (let block of keysBlocks) {
-      this.setUpdateCacheRequest(block)
-      const updateCachePromise = this.requestUpdateCache()
-      await this.handleError(updateCachePromise)
+  private async requestUpdateByBlocksOfKeys(chunksOfKeys: string[][]) {
+    for (const chunk of chunksOfKeys) {
+      const updateCachePromise = this.requestUpdateCache(chunk)
+      await this.handleError(updateCachePromise, chunk)
     }
   }
 
-  private setUpdateCacheRequest(cacheKeys: string[]) {
-    this.updateCacheRequest = gql`
-      mutation _updateCache {
-        _updateCache(keys: [${cacheKeys}])
+  private async requestUpdateCache(
+    cacheKeys: string[]
+  ): Promise<GraphQLResponse> {
+    const query = gql`
+      mutation _updateCache($cacheKeys: [String!]!) {
+        _updateCache(keys: $cacheKeys)
       }
     `
+    const variables = cacheKeys
+    return this.grahQLClient.request(query, variables)
   }
 
-  private async requestUpdateCache(): Promise<any> {
-    return this.grahQLClient.request(this.updateCacheRequest)
-  }
-
-  private async handleError(updateCachePromise: Promise<any>) {
+  private async handleError(
+    updateCachePromise: Promise<GraphQLResponse>,
+    currentKeys: string[]
+  ) {
     await updateCachePromise
-      .then(async (res: any) => {
-        if (res.errors) {
-          await this.retry()
+      .then(async (graphQLResponse) => {
+        if (graphQLResponse.errors) {
+          await this.retry(currentKeys)
         }
-        this.fillLogs(res)
+        this.fillLogs(graphQLResponse)
       })
-      .catch(async (err: any) => {
-        await this.retry()
-        this.fillLogs(err)
+      .catch(async (error: GraphQLError) => {
+        await this.retry(currentKeys)
+        this.fillLogs(error)
       })
   }
 
-  private async retry() {
+  private async retry(currentKeys: string[]) {
     let keepTrying = true
     const MAX_RETRIES = 4
     for (let i = 0; keepTrying; i++) {
       try {
-        const res = await this.requestUpdateCache()
-        if (!res.errors || i === MAX_RETRIES) {
+        const graphQLResponse = await this.requestUpdateCache(currentKeys)
+        if (!graphQLResponse.errors || i === MAX_RETRIES) {
           keepTrying = false
         }
       } catch (e) {
@@ -140,17 +132,26 @@ export class CacheWorker {
           keepTrying = false
         }
       }
-      // TODO: uncomment when timeout of jest is configured
+      // TODO: make longer than 0 when timeout of jest is configured
       // to be longer than 5000 ms for the tests of this module
-      // await wait(1)
+      await wait(0)
     }
   }
 
-  private fillLogs(response: any): void {
-    if (response instanceof Error || response.errors) {
-      this.errLog.push(response)
+  // TODO: bisect()
+
+  private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
+    if (graphQLResponse instanceof Error || graphQLResponse.errors) {
+      this.errorLog.push(graphQLResponse as Error)
       return
     }
-    this.okLog.push(response)
+    this.okLog.push(graphQLResponse)
+  }
+
+  public hasFailed(): boolean {
+    if (this.errorLog !== []) {
+      return true
+    }
+    return false
   }
 }

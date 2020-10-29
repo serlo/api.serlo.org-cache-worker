@@ -1,3 +1,0 @@
-[submodule "__tests__/api.serlo.org"]
-	path = __tests__/api.serlo.org
-	url = https://github.com/serlo/api.serlo.org.git
