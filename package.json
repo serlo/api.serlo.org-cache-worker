@@ -13,10 +13,14 @@
     "format:eslint": "yarn _eslint --fix",
     "format:prettier": "yarn _prettier --write",
     "license": "ts-node scripts/license-headers",
+    "lint": "npm-run-all --parallel lint:prettier lint:tsc lint:eslint",
+    "lint:eslint": "yarn _eslint",
+    "lint:prettier": "yarn _prettier --check",
+    "lint:tsc": "tsc --noEmit",
     "test": "jest"
   },
   "dependencies": {
-    "dotenv": "^8.2.0",
+    "dotenv": "^8.0.0",
     "graphql": "^15.0.0",
     "graphql-request": "~3.0.0",
     "jsonwebtoken": "^8.0.0"
