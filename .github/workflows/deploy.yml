@@ -29,5 +29,4 @@ jobs:
           service_account_key: ${{ secrets.GCP_KEY_SERLO_SHARED }}
       - run: gcloud auth configure-docker
       - run: yarn
-      # - run: yarn deploy:image
-      - run: echo 'image deployed but not really'
+      - run: yarn deploy:image

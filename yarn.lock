@@ -1773,7 +1773,7 @@
   resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.9.5.tgz#434711bdd49eb5ee69d90c1d67c354a9a8ecb18b"
   integrity sha512-/JHkVHtx/REVG0VVToGRGH2+23hsYLHdyG+GrvoUGlGAd0ErauXDyvHtRI/7H7mzLm+tBCKA7pfcpkQ1lf58iQ==
 
-"@types/ramda@^0.27.31":
+"@types/ramda@^0.27.0":
   version "0.27.31"
   resolved "https://registry.yarnpkg.com/@types/ramda/-/ramda-0.27.31.tgz#81b54d641ac895d8353a472413e863f77650e613"
   integrity sha512-VbqT74EAXSyVVRs4hCFvWGYGytoi98q+6BX0BGL8QPI5jndDa/WS3zNoaH6AhJczXenydIAE6mvD/jgp0SS0OQ==
@@ -1792,7 +1792,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/semver@^7.3.4":
+"@types/semver@^7.0.0":
   version "7.3.4"
   resolved "https://registry.yarnpkg.com/@types/semver/-/semver-7.3.4.tgz#43d7168fec6fa0988bb1a513a697b29296721afb"
   integrity sha512-+nVsLKlcUCeMzD2ufHEYuJ9a2ovstb6Dp52A5VsoKxDXgvE051XgHI/33I1EymwkRGQkwnA0LkhnUzituGs4EQ==

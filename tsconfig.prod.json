@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", "graphql.d.ts"],
+  "include": ["src"],
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,
