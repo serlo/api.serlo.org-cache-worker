@@ -27,6 +27,14 @@ import jwt from 'jsonwebtoken'
 
 import { wait } from './utils'
 
+/**
+ * Cache Worker of Serlo's API
+ * makes the API to cache values of some chosen keys.
+ * The use has to edit the file cache-keys.json for that.
+ * Add environment variable PAGINATION in order to detemine
+ * how many keys are going to be requested to be updated
+ * each time
+ */
 export class CacheWorker {
   private grahQLClient: GraphQLClient
 
@@ -63,6 +71,12 @@ export class CacheWorker {
     this.pagination = pagination
   }
 
+  /**
+   * Makes requests to Serlo's API in order that it updates its cache.
+
+   * @param keys an array of strings of the keys to be cached
+   * 
+   */
   public async update(keys: string[]): Promise<void> {
     const keysBlocks = this.splitUpKeysIntoChunks(keys, this.pagination)
     await this.requestUpdateByBlocksOfKeys(keysBlocks)
