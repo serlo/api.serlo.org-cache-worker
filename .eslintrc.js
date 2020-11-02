@@ -56,7 +56,7 @@ module.exports = {
     'import/no-extraneous-dependencies': [
       'error',
       {
-        devDependencies: ['__tests__/**/*', 'jest.setup.ts'],
+        devDependencies: ['__tests__/**/*', 'scripts/**/*', 'jest.setup.ts'],
         optionalDependencies: false,
       },
     ],
@@ -91,12 +91,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: [
-        '__tests-pacts__/**/*',
-        '__tests__/**/*',
-        'jest.setup.ts',
-        'jest.setup-pacts.ts',
-      ],
+      files: ['__tests-pacts__/**/*', '__tests__/**/*', 'jest.setup.ts'],
       rules: {
         '@typescript-eslint/no-non-null-assertion': 'off',
       },

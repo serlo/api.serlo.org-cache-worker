@@ -13,6 +13,8 @@ RUN yarn --frozen-lockfile --production=true --silent
 
 FROM dev-dependencies as build
 COPY src src
+COPY tsconfig.json .
+COPY tsconfig.prod.json .
 RUN yarn build
 
 FROM prod-dependencies as release

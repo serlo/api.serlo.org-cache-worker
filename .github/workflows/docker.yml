@@ -1,0 +1,9 @@
+name: Docker
+on:
+  pull_request:
+jobs:
+  cache-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker build -f Dockerfile -t cache-worker:latest .
