@@ -25,9 +25,9 @@ import { CacheWorker } from './cache-worker'
 
 // TODO: add tests to index.ts
 
-start()
+void start().then(() => {})
 
-function start() {
+async function start() {
   const cacheWorker = new CacheWorker({
     apiEndpoint: process.env.SERLO_ORG_HOST,
     secret: process.env.SECRET,
@@ -37,9 +37,7 @@ function start() {
 
   console.log('Updating cache values of the following keys:', cacheKeys)
 
-  // TODO: maybe enable this eslint rule this check and fix it properly
-  /* eslint-disable @typescript-eslint/no-floating-promises */
-  run({
+  await run({
     cacheWorker,
     cacheKeys,
   })
