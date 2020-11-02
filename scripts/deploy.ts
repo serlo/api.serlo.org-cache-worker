@@ -39,7 +39,7 @@ void run().then(() => {})
 async function run() {
   const { version } = await fetchPackageJSON()
   buildDockerImage({
-    name: 'cache-worker',
+    name: 'api-cache-worker',
     version,
     Dockerfile: path.join(root, 'Dockerfile'),
     context: '.',
