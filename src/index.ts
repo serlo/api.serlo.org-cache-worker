@@ -28,6 +28,9 @@ import { CacheWorker } from './cache-worker'
 void start().then(() => {})
 
 async function start() {
+  // TODO: accept writer as param, in order to enable
+  // writing to a log file.
+  // TODO: feat: option to fetch keys from another file
   const cacheWorker = new CacheWorker({
     apiEndpoint: process.env.SERLO_ORG_HOST,
     secret: process.env.SECRET,
@@ -36,7 +39,6 @@ async function start() {
   })
 
   console.log('Updating cache values of the following keys:', cacheKeys)
-
   await run({
     cacheWorker,
     cacheKeys,
@@ -51,15 +53,13 @@ interface Config {
 async function run(config: Config): Promise<void> {
   const { cacheWorker, cacheKeys } = config
   await cacheWorker.update(cacheKeys)
-  if (cacheWorker.hasFailed()) {
-    declareFailure(cacheWorker.errorLog)
+  if (cacheWorker.hasSucceeded()) {
+    declareSuccess()
     return
   }
-  declareSuccess()
+  declareFailure(cacheWorker.errorLog)
 }
 
-// TODO: at declare* accept writer as param, in order to enable
-// writing to a log file.
 function declareFailure(errors: Error[]) {
   console.warn(
     'Cache update was run but the following errors were found',

@@ -30,7 +30,7 @@ import { wait } from './utils'
 /**
  * Cache Worker of Serlo's API
  * makes the API to cache values of some chosen keys.
- * The use has to edit the file cache-keys.json for that.
+ * The user has to edit the file cache-keys.json for that.
  * Add environment variable PAGINATION in order to detemine
  * how many keys are going to be requested to be updated
  * each time
@@ -78,8 +78,8 @@ export class CacheWorker {
    * 
    */
   public async update(keys: string[]): Promise<void> {
-    const keysBlocks = this.splitUpKeysIntoChunks(keys, this.pagination)
-    await this.requestUpdateByBlocksOfKeys(keysBlocks)
+    const chunksOfKeys = this.splitUpKeysIntoChunks(keys, this.pagination)
+    await this.requestUpdateByChunks(chunksOfKeys)
   }
 
   // TODO: change return type to queue
@@ -96,7 +96,7 @@ export class CacheWorker {
     return chunksOfKeys
   }
 
-  private async requestUpdateByBlocksOfKeys(chunksOfKeys: string[][]) {
+  private async requestUpdateByChunks(chunksOfKeys: string[][]) {
     for (const chunk of chunksOfKeys) {
       const updateCachePromise = this.requestUpdateCache(chunk)
       await this.handleError(updateCachePromise, chunk)
@@ -162,10 +162,10 @@ export class CacheWorker {
     this.okLog.push(graphQLResponse)
   }
 
-  public hasFailed(): boolean {
-    if (this.errorLog !== []) {
-      return true
+  public hasSucceeded(): boolean {
+    if (this.errorLog.length > 0) {
+      return false
     }
-    return false
+    return true
   }
 }

@@ -55,7 +55,7 @@ beforeEach(() => {
 describe('Update-cache worker', () => {
   test('successfully calls _updateCache', async () => {
     await cacheWorker.update(fakeCacheKeys)
-    expect(cacheWorker.errorLog).toEqual([])
+    expect(cacheWorker.hasSucceeded()).toBeTruthy()
   })
   test('does not crash if _updateCache does not work', async () => {
     global.server.use(
@@ -63,17 +63,31 @@ describe('Update-cache worker', () => {
         return res(
           ctx.errors([
             {
-              message: 'Something went wrong at _updateCache, but be cool',
+              message: 'Something went wrong at the server, but be cool',
             },
           ])
         )
       })
     )
     await cacheWorker.update([...fakeCacheKeys])
-    expect(cacheWorker.errorLog[0].message).toContain(
-      'Something went wrong at _updateCache, but be cool'
-    )
     expect(cacheWorker.okLog.length).toEqual(0)
+    expect(cacheWorker.hasSucceeded()).toBeFalsy()
+    expect(cacheWorker.errorLog[0].message).toContain(
+      'Something went wrong at the server, but be cool'
+    )
+  })
+  test('does not crash if it receives an error object', async () => {
+    global.server.use(
+      serloApi.mutation('_updateCache', (_req, _res, _ctx) => {
+        throw Error('Something went really wrong, but be cool')
+      })
+    )
+    await cacheWorker.update([...fakeCacheKeys])
+    expect(cacheWorker.okLog.length).toEqual(0)
+    expect(cacheWorker.hasSucceeded()).toBeFalsy()
+    expect(cacheWorker.errorLog[0].message).toContain(
+      'Something went really wrong, but be cool'
+    )
   })
   test('does not crash if a cache value does not get updated for some reason', async () => {
     global.server.use(
@@ -95,6 +109,7 @@ describe('Update-cache worker', () => {
       })
     )
     await cacheWorker.update([...fakeCacheKeys])
+    expect(cacheWorker.hasSucceeded()).toBeFalsy()
     expect(cacheWorker.errorLog[0].message).toContain(
       'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
     )
@@ -126,7 +141,7 @@ describe('Update-cache worker', () => {
       'de.serlo.org/api/key10',
       'de.serlo.org/api/keyWrong',
     ])
-    expect(cacheWorker.errorLog).not.toEqual([])
+    expect(cacheWorker.hasSucceeded()).toBeFalsy()
   })
 
   // TODO: add test for pagination
