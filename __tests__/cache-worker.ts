@@ -33,6 +33,8 @@ const apiEndpoint = 'https://api.serlo.org/graphql'
 
 const serloApi = graphql.link(apiEndpoint)
 
+const EXTENDED_JEST_TIMEOUT = 20000 
+
 beforeEach(() => {
   cacheWorker = new CacheWorker({
     apiEndpoint: apiEndpoint,
@@ -75,10 +77,10 @@ describe('Update-cache worker', () => {
     expect(cacheWorker.errorLog[0].message).toContain(
       'Something went wrong at the server, but be cool'
     )
-  })
+  }, EXTENDED_JEST_TIMEOUT)
   test('does not crash if it receives an error object', async () => {
     global.server.use(
-      serloApi.mutation('_updateCache', (_req, _res, _ctx) => {
+      serloApi.mutation('_updateCache', () => {
         throw Error('Something went really wrong, but be cool')
       })
     )
@@ -88,7 +90,7 @@ describe('Update-cache worker', () => {
     expect(cacheWorker.errorLog[0].message).toContain(
       'Something went really wrong, but be cool'
     )
-  })
+  }, EXTENDED_JEST_TIMEOUT)
   test('does not crash if a cache value does not get updated for some reason', async () => {
     global.server.use(
       serloApi.mutation('_updateCache', (req, res, ctx) => {
@@ -113,16 +115,7 @@ describe('Update-cache worker', () => {
     expect(cacheWorker.errorLog[0].message).toContain(
       'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
     )
-  })
-  test('successfully updates only some values', async () => {
-    await cacheWorker.update([
-      'de.serlo.org/api/key0',
-      'de.serlo.org/api/key7',
-      'de.serlo.org/api/key10',
-      'de.serlo.org/api/key20',
-    ])
-    expect(cacheWorker.errorLog).toEqual([])
-  })
+  }, EXTENDED_JEST_TIMEOUT)
   test('does not crash even though it had a problem with some values', async () => {
     global.server.use(
       serloApi.mutation('_updateCache', (req, res, ctx) => {
@@ -142,7 +135,7 @@ describe('Update-cache worker', () => {
       'de.serlo.org/api/keyWrong',
     ])
     expect(cacheWorker.hasSucceeded()).toBeFalsy()
-  })
+  }, EXTENDED_JEST_TIMEOUT)
 
   // TODO: add test for pagination
 })

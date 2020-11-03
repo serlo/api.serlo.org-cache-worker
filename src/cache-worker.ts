@@ -146,9 +146,7 @@ export class CacheWorker {
           keepTrying = false
         }
       }
-      // TODO: make longer than 0 when timeout of jest is configured
-      // to be longer than 5000 ms for the tests of this module
-      await wait(0)
+      await wait(1)
     }
   }
 
