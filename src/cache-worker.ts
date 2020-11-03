@@ -38,7 +38,14 @@ import { wait } from './utils'
 export class CacheWorker {
   private grahQLClient: GraphQLClient
 
+  /** The successful responses from Serlo's API */
   public okLog: GraphQLResponse[] = []
+  /** 
+   *  The errors that ocurred in the API
+   *  of Serlo. It can be caused by the client or 
+   *  by the server as well as from other
+   *  origins.
+   */
   public errorLog: Error[] = []
 
   private pagination: number
@@ -72,10 +79,8 @@ export class CacheWorker {
   }
 
   /**
-   * Makes requests to Serlo's API in order that it updates its cache.
-
-   * @param keys an array of strings of the keys to be cached
-   * 
+   * Requests Serlo's API to update its cache according to chosen keys.
+   * @param keys an array of keys(strings) whose values should to be cached
    */
   public async update(keys: string[]): Promise<void> {
     const chunksOfKeys = this.splitUpKeysIntoChunks(keys, this.pagination)
@@ -138,11 +143,11 @@ export class CacheWorker {
     for (let i = 0; keepTrying; i++) {
       try {
         const graphQLResponse = await this.requestUpdateCache(currentKeys)
-        if (!graphQLResponse.errors || i === MAX_RETRIES) {
+        if (!graphQLResponse.errors || i >= MAX_RETRIES) {
           keepTrying = false
         }
       } catch (e) {
-        if (i === MAX_RETRIES) {
+        if (i >= MAX_RETRIES) {
           keepTrying = false
         }
       }
@@ -160,6 +165,11 @@ export class CacheWorker {
     this.okLog.push(graphQLResponse)
   }
 
+  /**
+   * Evaluate if the cache worker has succeeded updating the whole cache
+   * or not, in case of any error. See the errorLog for a more detailed
+   * description of the errors.
+   */
   public hasSucceeded(): boolean {
     if (this.errorLog.length > 0) {
       return false
