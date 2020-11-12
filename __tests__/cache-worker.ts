@@ -79,13 +79,13 @@ describe('Update-cache worker', () => {
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
         "_updateCache didn't work at all, but be cool"
-        )
+      )
       expect(cacheWorker.errorLog[1].message).toContain(
         "_updateCache didn't work at all, but be cool"
-        )
+      )
       expect(cacheWorker.errorLog[2].message).toContain(
         "_updateCache didn't work at all, but be cool"
-        )
+      )
       expect(cacheWorker.errorLog.length).not.toBeGreaterThan(3)
     },
     EXTENDED_JEST_TIMEOUT
@@ -105,11 +105,11 @@ describe('Update-cache worker', () => {
         'Something went really wrong, but be cool'
       )
       expect(cacheWorker.errorLog[1].message).toContain(
-        "Something went really wrong, but be cool"
-        )
+        'Something went really wrong, but be cool'
+      )
       expect(cacheWorker.errorLog[2].message).toContain(
-        "Something went really wrong, but be cool"
-        )
+        'Something went really wrong, but be cool'
+      )
       expect(cacheWorker.errorLog.length).not.toBeGreaterThan(3)
     },
     EXTENDED_JEST_TIMEOUT
@@ -141,6 +141,7 @@ describe('Update-cache worker', () => {
       expect(cacheWorker.errorLog[0].message).toContain(
         'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
       )
+      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(1)
     },
     EXTENDED_JEST_TIMEOUT
   )

@@ -21,7 +21,6 @@
  */
 /* eslint-disable import/no-extraneous-dependencies*/
 import { GraphQLResponse } from 'apollo-server-types'
-import { GraphQLError } from 'graphql'
 import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
 import { splitEvery } from 'ramda'
@@ -125,9 +124,11 @@ export class CacheWorker {
   ) {
     await updateCachePromise
       .then(async (graphQLResponse) => {
-        if (!graphQLResponse.errors) {
+        if (graphQLResponse.errors) {
           await this.retry(currentKeys)
+          return
         }
+        this.fillLogs(graphQLResponse)
       })
       .catch(async () => {
         await this.retry(currentKeys)
@@ -144,10 +145,10 @@ export class CacheWorker {
           keepTrying = false
           this.fillLogs(graphQLResponse)
         }
-      } catch (e) {
+      } catch (error) {
         if (i >= MAX_RETRIES) {
           keepTrying = false
-          this.fillLogs(e)
+          this.fillLogs(error)
         }
       }
       await wait(1)
