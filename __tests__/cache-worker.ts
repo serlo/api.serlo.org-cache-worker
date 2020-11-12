@@ -57,6 +57,7 @@ beforeEach(() => {
 describe('Update-cache worker', () => {
   test('successfully calls _updateCache', async () => {
     await cacheWorker.update(fakeCacheKeys)
+    expect(cacheWorker.okLog.length).toEqual(3)
     expect(cacheWorker.hasSucceeded()).toBeTruthy()
   })
   test(
@@ -78,7 +79,14 @@ describe('Update-cache worker', () => {
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
         "_updateCache didn't work at all, but be cool"
-      )
+        )
+      expect(cacheWorker.errorLog[1].message).toContain(
+        "_updateCache didn't work at all, but be cool"
+        )
+      expect(cacheWorker.errorLog[2].message).toContain(
+        "_updateCache didn't work at all, but be cool"
+        )
+      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(3)
     },
     EXTENDED_JEST_TIMEOUT
   )
@@ -96,6 +104,13 @@ describe('Update-cache worker', () => {
       expect(cacheWorker.errorLog[0].message).toContain(
         'Something went really wrong, but be cool'
       )
+      expect(cacheWorker.errorLog[1].message).toContain(
+        "Something went really wrong, but be cool"
+        )
+      expect(cacheWorker.errorLog[2].message).toContain(
+        "Something went really wrong, but be cool"
+        )
+      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(3)
     },
     EXTENDED_JEST_TIMEOUT
   )
@@ -121,6 +136,7 @@ describe('Update-cache worker', () => {
         })
       )
       await cacheWorker.update([...fakeCacheKeys])
+      expect(cacheWorker.okLog.length).toEqual(2)
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
         'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
@@ -128,30 +144,4 @@ describe('Update-cache worker', () => {
     },
     EXTENDED_JEST_TIMEOUT
   )
-  test(
-    'does not crash even though it had a problem with some values',
-    async () => {
-      global.server.use(
-        serloApi.mutation('_updateCache', (req, res, ctx) => {
-          return res(
-            ctx.errors([
-              {
-                message: 'keyInexistent is not a valid key',
-              },
-            ])
-          )
-        })
-      )
-      await cacheWorker.update([
-        'de.serlo.org/api/key0',
-        'de.serlo.org/api/keyInexistent',
-        'de.serlo.org/api/key10',
-        'de.serlo.org/api/keyWrong',
-      ])
-      expect(cacheWorker.hasSucceeded()).toBeFalsy()
-    },
-    EXTENDED_JEST_TIMEOUT
-  )
-
-  // TODO: add test for pagination
 })

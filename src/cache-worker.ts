@@ -126,9 +126,8 @@ export class CacheWorker {
     await updateCachePromise
       .then(async (graphQLResponse) => {
         if (!graphQLResponse.errors) {
-          return
+          await this.retry(currentKeys)
         }
-        await this.retry(currentKeys)
         this.fillLogs(graphQLResponse) // FIXME
       })
       .catch(async (error: GraphQLError) => {
@@ -171,7 +170,7 @@ export class CacheWorker {
    * description of the errors.
    */
   public hasSucceeded(): boolean {
-    if (this.errorLog.length > 0) {
+    if (this.errorLog.length > 0 || this.okLog.length == 0) {
       return false
     }
     return true
