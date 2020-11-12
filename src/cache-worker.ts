@@ -128,11 +128,9 @@ export class CacheWorker {
         if (!graphQLResponse.errors) {
           await this.retry(currentKeys)
         }
-        this.fillLogs(graphQLResponse) // FIXME
       })
-      .catch(async (error: GraphQLError) => {
+      .catch(async () => {
         await this.retry(currentKeys)
-        this.fillLogs(error) // FIXME: maybe there is no error after retrying
       })
   }
 
@@ -144,10 +142,12 @@ export class CacheWorker {
         const graphQLResponse = await this.requestUpdateCache(currentKeys)
         if (!graphQLResponse.errors || i >= MAX_RETRIES) {
           keepTrying = false
+          this.fillLogs(graphQLResponse)
         }
       } catch (e) {
         if (i >= MAX_RETRIES) {
           keepTrying = false
+          this.fillLogs(e)
         }
       }
       await wait(1)
