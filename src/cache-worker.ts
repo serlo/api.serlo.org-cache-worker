@@ -25,7 +25,7 @@ import { GraphQLError } from 'graphql'
 import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
 
-import { wait } from './utils'
+import { wait, Stack } from './utils'
 
 /**
  * Cache Worker of Serlo's API
@@ -40,9 +40,10 @@ export class CacheWorker {
 
   /** The successful responses from Serlo's API */
   public okLog: GraphQLResponse[] = []
-  /** 
-   *  The errors that ocurred in the API
-   *  of Serlo. It can be caused by the client or 
+  /**
+   *  The errors that ocurred while trying
+   *  to update values of given keys.
+   *  They can be caused by the client or
    *  by the server as well as from other
    *  origins.
    */
@@ -83,28 +84,29 @@ export class CacheWorker {
    * @param keys an array of keys(strings) whose values should to be cached
    */
   public async update(keys: string[]): Promise<void> {
-    const chunksOfKeys = this.splitUpKeysIntoChunks(keys, this.pagination)
-    await this.requestUpdateByChunks(chunksOfKeys)
+    const stackOfKeys = this.putChunksOfKeysOnStack(keys, this.pagination)
+    await this.dispatchKeys(stackOfKeys)
   }
 
-  // TODO: change return type to queue
-  private splitUpKeysIntoChunks(
+  private putChunksOfKeysOnStack(
     keys: string[],
     pagination: number
-  ): string[][] {
+  ): Stack<string[]> {
     const keysClone = [...keys]
-    const chunksOfKeys: string[][] = []
+    const stackOfKeys = new Stack<string[]>()
     while (keysClone.length) {
       const temp = keysClone.splice(0, pagination)
-      chunksOfKeys.push(temp)
+      stackOfKeys.push(temp)
     }
-    return chunksOfKeys
+    return stackOfKeys
   }
 
-  private async requestUpdateByChunks(chunksOfKeys: string[][]) {
-    for (const chunk of chunksOfKeys) {
-      const updateCachePromise = this.requestUpdateCache(chunk)
-      await this.handleError(updateCachePromise, chunk)
+  private async dispatchKeys(stackOfKeys: Stack<string[]>) {
+    while (!stackOfKeys.isEmpty()) {
+      const currentKeys = stackOfKeys.peek()
+      const updateCachePromise = this.requestUpdateCache(currentKeys)
+      await this.handleError(updateCachePromise, currentKeys)
+      stackOfKeys.pop()
     }
   }
 
@@ -126,14 +128,15 @@ export class CacheWorker {
   ) {
     await updateCachePromise
       .then(async (graphQLResponse) => {
-        if (graphQLResponse.errors) {
-          await this.retry(currentKeys)
+        if (!graphQLResponse.errors) {
+          return
         }
-        this.fillLogs(graphQLResponse)
+        await this.retry(currentKeys)
+        this.fillLogs(graphQLResponse) // FIXME
       })
       .catch(async (error: GraphQLError) => {
         await this.retry(currentKeys)
-        this.fillLogs(error)
+        this.fillLogs(error) // FIXME: maybe there is no error after retrying
       })
   }
 

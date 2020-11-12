@@ -27,3 +27,36 @@ export async function wait(seconds = 1) {
     }, seconds * 1000)
   })
 }
+
+export class Stack<T> {
+  private stack: T[]
+
+  public constructor() {
+    this.stack = new Array<T>()
+  }
+
+  public push(element: T) {
+    this.stack.push(element)
+  }
+
+  public pop() {
+    if (this.isEmpty()) throw new StackUnderflowError('Stack is empty')
+    return this.stack.pop()
+  }
+
+  public peek() {
+    if (this.isEmpty()) throw new StackUnderflowError('Stack is empty')
+    return this.stack[this.stack.length - 1]
+  }
+
+  public isEmpty() {
+    return !this.stack.length
+  }
+}
+
+class StackUnderflowError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'StackUnderflowError'
+  }
+}
