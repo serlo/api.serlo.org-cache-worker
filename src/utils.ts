@@ -52,6 +52,12 @@ export class Stack<T> {
   public isEmpty() {
     return !this.stack.length
   }
+
+  public peekAndPop() {
+    const itemOnTop = this.peek()
+    this.pop()
+    return itemOnTop
+  }
 }
 
 class StackUnderflowError extends Error {

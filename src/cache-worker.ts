@@ -24,6 +24,7 @@ import { GraphQLResponse } from 'apollo-server-types'
 import { GraphQLError } from 'graphql'
 import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
+import { splitEvery } from 'ramda'
 
 import { wait, Stack } from './utils'
 
@@ -92,21 +93,17 @@ export class CacheWorker {
     keys: string[],
     pagination: number
   ): Stack<string[]> {
-    const keysClone = [...keys]
+    const chunksOfKeys = splitEvery(pagination, keys)
     const stackOfKeys = new Stack<string[]>()
-    while (keysClone.length) {
-      const temp = keysClone.splice(0, pagination)
-      stackOfKeys.push(temp)
-    }
+    chunksOfKeys.forEach((chunk) => stackOfKeys.push(chunk))
     return stackOfKeys
   }
 
   private async dispatchKeys(stackOfKeys: Stack<string[]>) {
     while (!stackOfKeys.isEmpty()) {
-      const currentKeys = stackOfKeys.peek()
+      const currentKeys = stackOfKeys.peekAndPop()
       const updateCachePromise = this.requestUpdateCache(currentKeys)
       await this.handleError(updateCachePromise, currentKeys)
-      stackOfKeys.pop()
     }
   }
 
