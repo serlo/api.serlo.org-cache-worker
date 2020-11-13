@@ -25,6 +25,7 @@ import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
 import { splitEvery } from 'ramda'
 
+import { AbstractCacheWorker } from './types'
 import { wait, Stack } from './utils'
 
 /**
@@ -35,7 +36,7 @@ import { wait, Stack } from './utils'
  * how many keys are going to be requested to be updated
  * each time
  */
-export class CacheWorker {
+export class CacheWorker implements AbstractCacheWorker {
   private grahQLClient: GraphQLClient
 
   /** The successful responses from Serlo's API */
@@ -84,11 +85,11 @@ export class CacheWorker {
    * @param keys an array of keys(strings) whose values should to be cached
    */
   public async update(keys: string[]): Promise<void> {
-    const stackOfKeys = this.putChunksOfKeysOnStack(keys, this.pagination)
+    const stackOfKeys = this.makeStackOutOfKeys(keys, this.pagination)
     await this.dispatchKeys(stackOfKeys)
   }
 
-  private putChunksOfKeysOnStack(
+  private makeStackOutOfKeys(
     keys: string[],
     pagination: number
   ): Stack<string[]> {
@@ -159,10 +160,11 @@ export class CacheWorker {
 
   private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
     if (graphQLResponse instanceof Error) {
-      this.errorLog.push(graphQLResponse as Error)
+      this.errorLog.push(graphQLResponse)
       return
     }
-    if (graphQLResponse.errors) { // TODO: splited for coverage controll, put it back or delete
+    if (graphQLResponse.errors) {
+      // TODO: splited for coverage controll, put it back or delete
       this.errorLog.push(graphQLResponse as Error)
       return
     }
@@ -171,7 +173,7 @@ export class CacheWorker {
 
   /**
    * Evaluate if the cache worker has succeeded updating the values of
-   * of all requested keys or not, in case of any error. 
+   * of all requested keys or not, in case of any error.
    * See the errorLog for a more detailed description of the errors.
    */
   public hasSucceeded(): boolean {
