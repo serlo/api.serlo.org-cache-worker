@@ -158,7 +158,11 @@ export class CacheWorker {
   // TODO: bisect()
 
   private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
-    if (graphQLResponse instanceof Error || graphQLResponse.errors) {
+    if (graphQLResponse instanceof Error) {
+      this.errorLog.push(graphQLResponse as Error)
+      return
+    }
+    if (graphQLResponse.errors) { // TODO: splited for coverage controll, put it back or delete
       this.errorLog.push(graphQLResponse as Error)
       return
     }
@@ -166,9 +170,9 @@ export class CacheWorker {
   }
 
   /**
-   * Evaluate if the cache worker has succeeded updating the whole cache
-   * or not, in case of any error. See the errorLog for a more detailed
-   * description of the errors.
+   * Evaluate if the cache worker has succeeded updating the values of
+   * of all requested keys or not, in case of any error. 
+   * See the errorLog for a more detailed description of the errors.
    */
   public hasSucceeded(): boolean {
     if (this.errorLog.length > 0 || this.okLog.length == 0) {
