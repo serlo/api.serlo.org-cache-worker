@@ -86,7 +86,7 @@ export class CacheWorker implements AbstractCacheWorker {
    */
   public async update(keys: string[]): Promise<void> {
     const stackOfKeys = this.makeStackOutOfKeys(keys, this.pagination)
-    await this.dispatchKeys(stackOfKeys)
+    await this.makeRequests(stackOfKeys)
   }
 
   private makeStackOutOfKeys(keys: string[], pagination: number): Stack<Task> {
@@ -99,17 +99,29 @@ export class CacheWorker implements AbstractCacheWorker {
     return stackOfTasks
   }
 
-  private async dispatchKeys(stackOfTasks: Stack<Task>) {
+  private async makeRequests(stackOfTasks: Stack<Task>) {
     while (!stackOfTasks.isEmpty()) {
       const task = stackOfTasks.peekAndPop()
-      const updateCachePromise = this.requestUpdateCache(task.keys)
-      await this.handleError(updateCachePromise, task)
+      let response: GraphQLResponse = {}
+      let hasError = false
+      try {
+        response = await this.requestUpdateCache(task.keys)
+        if (response.errors) hasError = true
+      } catch (error) {
+        hasError = true
+      }
+      if (hasError) {
+        await this.retry(task)
+      } else {
+        this.fillLogs(response)
+      }
     }
   }
 
   private async requestUpdateCache(
     cacheKeys: string[]
   ): Promise<GraphQLResponse> {
+    if (cacheKeys.length === 0) throw new Error("EmptyCacheKeysError: no cache key was provided")
     const query = gql`
       mutation _updateCache($cacheKeys: [String!]!) {
         _updateCache(keys: $cacheKeys)
@@ -117,23 +129,6 @@ export class CacheWorker implements AbstractCacheWorker {
     `
     const variables = cacheKeys
     return this.grahQLClient.request(query, variables)
-  }
-
-  private async handleError(
-    updateCachePromise: Promise<GraphQLResponse>,
-    task: Task
-  ) {
-    await updateCachePromise
-      .then(async (graphQLResponse) => {
-        if (graphQLResponse.errors) {
-          await this.retry(task)
-          return
-        }
-        this.fillLogs(graphQLResponse)
-      })
-      .catch(async () => {
-        await this.retry(task)
-      })
   }
 
   private async retry(task: Task) {
@@ -158,14 +153,9 @@ export class CacheWorker implements AbstractCacheWorker {
   private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
     if (graphQLResponse instanceof Error) {
       this.errorLog.push(graphQLResponse)
-      return
+    } else {
+      this.okLog.push(graphQLResponse)
     }
-    if (graphQLResponse.errors) {
-      // TODO: splited for coverage controll, put it back or delete
-      this.errorLog.push(graphQLResponse as Error)
-      return
-    }
-    this.okLog.push(graphQLResponse)
   }
 
   /**
