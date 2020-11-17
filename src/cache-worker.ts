@@ -52,6 +52,8 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private pagination: number
 
+  private stackOfTasks: Stack<Task> | null = null
+
   public constructor({
     apiEndpoint,
     service,
@@ -85,13 +87,14 @@ export class CacheWorker implements AbstractCacheWorker {
    * @param keys an array of keys(strings) whose values should to be cached
    */
   public async update(keys: string[]): Promise<void> {
-    const stackOfKeys = this.makeStackOutOfKeys(keys, this.pagination)
-    await this.makeRequests(stackOfKeys)
+    if (keys.length === 0) throw new Error("EmptyCacheKeysError: no cache key was provided")
+    this.stackOfTasks = this.makeStackOutOfKeys(keys, this.pagination)
+    await this.makeRequests()
   }
 
   private makeStackOutOfKeys(keys: string[], pagination: number): Stack<Task> {
     const chunksOfKeys = splitEvery(pagination, keys)
-    const stackOfTasks = new Stack<Task>()
+    let stackOfTasks = new Stack<Task>()
     chunksOfKeys.forEach((chunk) => {
       const task = { keys: chunk, numberOfRetries: 0 }
       stackOfTasks.push(task)
@@ -99,9 +102,9 @@ export class CacheWorker implements AbstractCacheWorker {
     return stackOfTasks
   }
 
-  private async makeRequests(stackOfTasks: Stack<Task>) {
-    while (!stackOfTasks.isEmpty()) {
-      const task = stackOfTasks.peekAndPop()
+  private async makeRequests() {
+    while (!this.stackOfTasks!.isEmpty()) {
+      const task = this.stackOfTasks!.peekAndPop()
       let response: GraphQLResponse = {}
       let hasError = false
       try {
@@ -111,6 +114,7 @@ export class CacheWorker implements AbstractCacheWorker {
         hasError = true
       }
       if (hasError) {
+        //splitEvery(4, task.keys)
         await this.retry(task)
       } else {
         this.fillLogs(response)
