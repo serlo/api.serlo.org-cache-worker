@@ -25,7 +25,7 @@ import { CacheWorker } from '../src/cache-worker'
 
 const fakeCacheKeys = [...Array(21).keys()].map(
   (x) => `de.serlo.org/api/key${x}`
-  )
+)
 
 let cacheWorker: CacheWorker
 

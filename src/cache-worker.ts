@@ -25,7 +25,7 @@ import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
 import { splitEvery } from 'ramda'
 
-import { AbstractCacheWorker } from './types'
+import { AbstractCacheWorker, Task } from './types'
 import { wait, Stack } from './utils'
 
 /**
@@ -89,21 +89,21 @@ export class CacheWorker implements AbstractCacheWorker {
     await this.dispatchKeys(stackOfKeys)
   }
 
-  private makeStackOutOfKeys(
-    keys: string[],
-    pagination: number
-  ): Stack<string[]> {
+  private makeStackOutOfKeys(keys: string[], pagination: number): Stack<Task> {
     const chunksOfKeys = splitEvery(pagination, keys)
-    const stackOfKeys = new Stack<string[]>()
-    chunksOfKeys.forEach((chunk) => stackOfKeys.push(chunk))
-    return stackOfKeys
+    const stackOfTasks = new Stack<Task>()
+    chunksOfKeys.forEach((chunk) => {
+      const task = { keys: chunk, numberOfRetries: 0 }
+      stackOfTasks.push(task)
+    })
+    return stackOfTasks
   }
 
-  private async dispatchKeys(stackOfKeys: Stack<string[]>) {
-    while (!stackOfKeys.isEmpty()) {
-      const currentKeys = stackOfKeys.peekAndPop()
-      const updateCachePromise = this.requestUpdateCache(currentKeys)
-      await this.handleError(updateCachePromise, currentKeys)
+  private async dispatchKeys(stackOfTasks: Stack<Task>) {
+    while (!stackOfTasks.isEmpty()) {
+      const task = stackOfTasks.peekAndPop()
+      const updateCachePromise = this.requestUpdateCache(task.keys)
+      await this.handleError(updateCachePromise, task)
     }
   }
 
@@ -121,42 +121,39 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private async handleError(
     updateCachePromise: Promise<GraphQLResponse>,
-    currentKeys: string[]
+    task: Task
   ) {
     await updateCachePromise
       .then(async (graphQLResponse) => {
         if (graphQLResponse.errors) {
-          await this.retry(currentKeys)
+          await this.retry(task)
           return
         }
         this.fillLogs(graphQLResponse)
       })
       .catch(async () => {
-        await this.retry(currentKeys)
+        await this.retry(task)
       })
   }
 
-  private async retry(currentKeys: string[]) {
-    let keepTrying = true
-    const MAX_RETRIES = 4
-    for (let i = 0; keepTrying; i++) {
-      try {
-        const graphQLResponse = await this.requestUpdateCache(currentKeys)
-        if (!graphQLResponse.errors || i >= MAX_RETRIES) {
-          keepTrying = false
-          this.fillLogs(graphQLResponse)
-        }
-      } catch (error) {
-        if (i >= MAX_RETRIES) {
-          keepTrying = false
-          this.fillLogs(error)
-        }
+  private async retry(task: Task) {
+    const MAX_RETRIES = 3
+    try {
+      const graphQLResponse = await this.requestUpdateCache(task.keys)
+      if (!graphQLResponse.errors || task.numberOfRetries >= MAX_RETRIES) {
+        this.fillLogs(graphQLResponse)
+        return
       }
-      await wait(1)
+    } catch (error) {
+      if (task.numberOfRetries >= MAX_RETRIES) {
+        this.fillLogs(error)
+        return
+      }
     }
+    task.numberOfRetries++
+    await this.retry(task)
+    await wait(1)
   }
-
-  // TODO: bisect()
 
   private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
     if (graphQLResponse instanceof Error) {
