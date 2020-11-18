@@ -23,21 +23,29 @@
 import cacheKeys from './cache-keys.json'
 import { CacheWorker } from './cache-worker'
 
-// TODO: add tests to index.ts
+interface Config {
+  cacheWorker: CacheWorker
+  cacheKeys: string[]
+}
 
 void start().then(() => {})
 
 async function start() {
-  // TODO: accept writer as param, in order to enable
-  // writing to a log file.
-  // TODO: feat: option to fetch keys from another file
+  const pagination = process.env.PAGINATION
+  if (pagination !== undefined && pagination <= 0) {
+    throw new Error(
+      'NonPositivePaginationError: pagination has to be a positive number'
+    )
+  }
+
   const cacheWorker = new CacheWorker({
     apiEndpoint: process.env.SERLO_ORG_HOST,
     secret: process.env.SECRET,
     service: process.env.SERVICE,
-    pagination: process.env.PAGINATION,
+    pagination,
   })
 
+  // TODO: enable logging to file.
   console.log('Updating cache values of the following keys:', cacheKeys)
   await run({
     cacheWorker,
@@ -45,19 +53,14 @@ async function start() {
   })
 }
 
-interface Config {
-  cacheWorker: CacheWorker
-  cacheKeys: string[]
-}
-
 async function run(config: Config): Promise<void> {
   const { cacheWorker, cacheKeys } = config
   await cacheWorker.update(cacheKeys)
   if (cacheWorker.hasSucceeded()) {
     declareSuccess()
-    return
+  } else {
+    declareFailure(cacheWorker.errorLog)
   }
-  declareFailure(cacheWorker.errorLog)
 }
 
 function declareFailure(errors: Error[]) {

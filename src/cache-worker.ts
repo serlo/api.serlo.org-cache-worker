@@ -52,7 +52,7 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private pagination: number
 
-  private stackOfTasks!: Stack<Task>
+  private tasks!: Stack<Task>
 
   public constructor({
     apiEndpoint,
@@ -87,25 +87,26 @@ export class CacheWorker implements AbstractCacheWorker {
    * @param keys an array of keys(strings) whose values should to be cached
    */
   public async update(keys: string[]): Promise<void> {
-    if (keys.length === 0)
+    if (keys.length === 0) {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
-    this.stackOfTasks = this.makeStackOutOfKeys(keys, this.pagination)
+    }
+    this.tasks = this.makeStackOutOfKeys(keys, this.pagination)
     await this.makeRequests()
   }
 
   private makeStackOutOfKeys(keys: string[], pagination: number): Stack<Task> {
     const chunksOfKeys = splitEvery(pagination, keys)
-    const stackOfTasks = new Stack<Task>()
+    const tasks = new Stack<Task>()
     chunksOfKeys.forEach((chunk) => {
       const task = { keys: chunk, numberOfRetries: 0 }
-      stackOfTasks.push(task)
+      tasks.push(task)
     })
-    return stackOfTasks
+    return tasks
   }
 
   private async makeRequests() {
-    while (!this.stackOfTasks.isEmpty()) {
-      const task = this.stackOfTasks.peekAndPop()
+    while (!this.tasks.isEmpty()) {
+      const task = this.tasks.peekAndPop()
       const { response, hasError } = await this.getResponse(task)
       if (hasError && task.keys.length > 1) {
         this.bisect(task)
@@ -115,14 +116,6 @@ export class CacheWorker implements AbstractCacheWorker {
         this.fillLogs(response)
       }
     }
-  }
-
-  private bisect(task: Task) {
-    const splittedKeys = splitEvery(task.keys.length / 2, task.keys)
-    splittedKeys.forEach((keys) => {
-      const task = { keys, numberOfRetries: 0 }
-      this.stackOfTasks.push(task)
-    })
   }
 
   private async getResponse(
@@ -156,6 +149,14 @@ export class CacheWorker implements AbstractCacheWorker {
     `
     const variables = cacheKeys
     return this.grahQLClient.request(query, variables)
+  }
+
+  private bisect(task: Task) {
+    const splittedKeys = splitEvery(task.keys.length / 2, task.keys)
+    splittedKeys.forEach((keys) => {
+      const task = { keys, numberOfRetries: 0 }
+      this.tasks.push(task)
+    })
   }
 
   private async retry(task: Task) {
