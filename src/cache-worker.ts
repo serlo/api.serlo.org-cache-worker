@@ -52,7 +52,7 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private pagination: number
 
-  private stackOfTasks: Stack<Task> | null = null
+  private stackOfTasks!: Stack<Task>
 
   public constructor({
     apiEndpoint,
@@ -87,14 +87,15 @@ export class CacheWorker implements AbstractCacheWorker {
    * @param keys an array of keys(strings) whose values should to be cached
    */
   public async update(keys: string[]): Promise<void> {
-    if (keys.length === 0) throw new Error("EmptyCacheKeysError: no cache key was provided")
+    if (keys.length === 0)
+      throw new Error('EmptyCacheKeysError: no cache key was provided')
     this.stackOfTasks = this.makeStackOutOfKeys(keys, this.pagination)
     await this.makeRequests()
   }
 
   private makeStackOutOfKeys(keys: string[], pagination: number): Stack<Task> {
     const chunksOfKeys = splitEvery(pagination, keys)
-    let stackOfTasks = new Stack<Task>()
+    const stackOfTasks = new Stack<Task>()
     chunksOfKeys.forEach((chunk) => {
       const task = { keys: chunk, numberOfRetries: 0 }
       stackOfTasks.push(task)
@@ -103,18 +104,12 @@ export class CacheWorker implements AbstractCacheWorker {
   }
 
   private async makeRequests() {
-    while (!this.stackOfTasks!.isEmpty()) {
-      const task = this.stackOfTasks!.peekAndPop()
-      let response: GraphQLResponse = {}
-      let hasError = false
-      try {
-        response = await this.requestUpdateCache(task.keys)
-        if (response.errors) hasError = true
-      } catch (error) {
-        hasError = true
-      }
-      if (hasError) {
-        //splitEvery(4, task.keys)
+    while (!this.stackOfTasks.isEmpty()) {
+      const task = this.stackOfTasks.peekAndPop()
+      const { response, hasError } = await this.getResponse(task)
+      if (hasError && task.keys.length > 1) {
+        this.bisect(task)
+      } else if (hasError && task.keys.length === 1) {
         await this.retry(task)
       } else {
         this.fillLogs(response)
@@ -122,10 +117,38 @@ export class CacheWorker implements AbstractCacheWorker {
     }
   }
 
+  private bisect(task: Task) {
+    const splittedKeys = splitEvery(task.keys.length / 2, task.keys)
+    splittedKeys.forEach((keys) => {
+      const task = { keys, numberOfRetries: 0 }
+      this.stackOfTasks.push(task)
+    })
+  }
+
+  private async getResponse(
+    task: Task
+  ): Promise<{ response: GraphQLResponse | Error; hasError: boolean }> {
+    let response: GraphQLResponse = {}
+    let hasError = false
+    try {
+      response = await this.requestUpdateCache(task.keys)
+      if (response.errors) {
+        hasError = true
+        return { response, hasError }
+      }
+    } catch (error) {
+      hasError = true
+      return { response: error as Error, hasError }
+    }
+    return { response, hasError }
+  }
+  
   private async requestUpdateCache(
     cacheKeys: string[]
   ): Promise<GraphQLResponse> {
-    if (cacheKeys.length === 0) throw new Error("EmptyCacheKeysError: no cache key was provided")
+    if (cacheKeys.length === 0) {
+      throw new Error('EmptyCacheKeysError: no cache key was provided')
+    }
     const query = gql`
       mutation _updateCache($cacheKeys: [String!]!) {
         _updateCache(keys: $cacheKeys)
@@ -137,17 +160,10 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private async retry(task: Task) {
     const MAX_RETRIES = 3
-    try {
-      const graphQLResponse = await this.requestUpdateCache(task.keys)
-      if (!graphQLResponse.errors || task.numberOfRetries >= MAX_RETRIES) {
-        this.fillLogs(graphQLResponse)
-        return
-      }
-    } catch (error) {
-      if (task.numberOfRetries >= MAX_RETRIES) {
-        this.fillLogs(error)
-        return
-      }
+    const { response, hasError } = await this.getResponse(task)
+    if (!hasError || task.numberOfRetries >= MAX_RETRIES) {
+      this.fillLogs(response)
+      return
     }
     task.numberOfRetries++
     await this.retry(task)

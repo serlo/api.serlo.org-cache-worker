@@ -33,7 +33,7 @@ const apiEndpoint = 'https://api.serlo.org/graphql'
 
 const serloApi = graphql.link(apiEndpoint)
 
-const EXTENDED_JEST_TIMEOUT = 20000
+const EXTENDED_JEST_TIMEOUT = 500000
 
 beforeEach(() => {
   cacheWorker = new CacheWorker({
@@ -86,7 +86,7 @@ describe('Update-cache worker', () => {
       expect(cacheWorker.errorLog[2].message).toContain(
         "_updateCache didn't work at all, but be cool"
       )
-      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(3)
+      expect(cacheWorker.errorLog.length).toEqual(21)
     },
     EXTENDED_JEST_TIMEOUT
   )
@@ -110,7 +110,7 @@ describe('Update-cache worker', () => {
       expect(cacheWorker.errorLog[2].message).toContain(
         'Something went really wrong, but be cool'
       )
-      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(3)
+      expect(cacheWorker.errorLog.length).toEqual(21)
     },
     EXTENDED_JEST_TIMEOUT
   )
