@@ -55,102 +55,101 @@ beforeEach(() => {
 })
 
 describe('Update-cache worker', () => {
-    test('successfully calls _updateCache', async () => {
-      await cacheWorker.update(fakeCacheKeys)
-      expect(cacheWorker.okLog.length).toEqual(3)
-      expect(cacheWorker.hasSucceeded()).toBeTruthy()
-    })
-    test(
-      'does not crash if _updateCache does not work',
-      async () => {
-        global.server.use(
-          serloApi.mutation('_updateCache', (_req, res, ctx) => {
-            return res(
-              ctx.errors([
-                {
-                  message: "_updateCache didn't work at all, but be cool",
-                },
-              ])
-            )
-          })
-        )
-        await cacheWorker.update([...fakeCacheKeys])
-        expect(cacheWorker.okLog.length).toEqual(0)
-        expect(cacheWorker.hasSucceeded()).toBeFalsy()
-        expect(cacheWorker.errorLog[0].message).toContain(
-          "_updateCache didn't work at all, but be cool"
-        )
-        expect(cacheWorker.errorLog[1].message).toContain(
-          "_updateCache didn't work at all, but be cool"
-        )
-        expect(cacheWorker.errorLog[2].message).toContain(
-          "_updateCache didn't work at all, but be cool"
-        )
-        expect(cacheWorker.errorLog.length).toEqual(21)
-      },
-      EXTENDED_JEST_TIMEOUT
-    )
-    test(
-      'does not crash if it receives an error object',
-      async () => {
-        global.server.use(
-          serloApi.mutation('_updateCache', () => {
-            throw Error('Something went really wrong, but be cool')
-          })
-        )
-        await cacheWorker.update([...fakeCacheKeys])
-        expect(cacheWorker.okLog.length).toEqual(0)
-        expect(cacheWorker.hasSucceeded()).toBeFalsy()
-        expect(cacheWorker.errorLog[0].message).toContain(
-          'Something went really wrong, but be cool'
-        )
-        expect(cacheWorker.errorLog[1].message).toContain(
-          'Something went really wrong, but be cool'
-        )
-        expect(cacheWorker.errorLog[2].message).toContain(
-          'Something went really wrong, but be cool'
-        )
-        expect(cacheWorker.errorLog.length).toEqual(21)
-      },
-      EXTENDED_JEST_TIMEOUT
-    )
-    test(
-      'does not crash if a cache value does not get updated for some reason',
-      async () => {
-        global.server.use(
-          serloApi.mutation('_updateCache', (req, res, ctx) => {
-            /* eslint-disable @typescript-eslint/no-unsafe-call */
-            if (req.body?.variables!.includes('de.serlo.org/api/key20')) {
-              return res(
-                ctx.errors([
-                  {
-                    message:
-                      'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm',
-                  },
-                ])
-              )
-            }
-            return res(
-              ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
-            )
-          })
-        )
-        await cacheWorker.update([...fakeCacheKeys])
-        expect(cacheWorker.okLog.length).toEqual(2)
-        expect(cacheWorker.hasSucceeded()).toBeFalsy()
-        expect(cacheWorker.errorLog[0].message).toContain(
-          'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
-        )
-        expect(cacheWorker.errorLog.length).not.toBeGreaterThan(1)
-      },
-      EXTENDED_JEST_TIMEOUT
-    )
+  test('successfully calls _updateCache', async () => {
+    await cacheWorker.update(fakeCacheKeys)
+    expect(cacheWorker.okLog.length).toEqual(3)
+    expect(cacheWorker.hasSucceeded()).toBeTruthy()
+  })
   test(
-    'bisect requests with error in order to update all others would be ok otherwise',
+    'does not crash if _updateCache does not work',
+    async () => {
+      global.server.use(
+        serloApi.mutation('_updateCache', (_req, res, ctx) => {
+          return res(
+            ctx.errors([
+              {
+                message: "_updateCache didn't work at all, but be cool",
+              },
+            ])
+          )
+        })
+      )
+      await cacheWorker.update([...fakeCacheKeys])
+      expect(cacheWorker.okLog.length).toEqual(0)
+      expect(cacheWorker.hasSucceeded()).toBeFalsy()
+      expect(cacheWorker.errorLog[0].message).toContain(
+        "_updateCache didn't work at all, but be cool"
+      )
+      expect(cacheWorker.errorLog[10].message).toContain(
+        "_updateCache didn't work at all, but be cool"
+      )
+      expect(cacheWorker.errorLog[20].message).toContain(
+        "_updateCache didn't work at all, but be cool"
+      )
+      expect(cacheWorker.errorLog.length).toEqual(21)
+    },
+    EXTENDED_JEST_TIMEOUT
+  )
+  test(
+    'does not crash if it receives an error object',
+    async () => {
+      global.server.use(
+        serloApi.mutation('_updateCache', () => {
+          throw Error('Something went really wrong, but be cool')
+        })
+      )
+      await cacheWorker.update([...fakeCacheKeys])
+      expect(cacheWorker.okLog.length).toEqual(0)
+      expect(cacheWorker.hasSucceeded()).toBeFalsy()
+      expect(cacheWorker.errorLog[0].message).toContain(
+        'Something went really wrong, but be cool'
+      )
+      expect(cacheWorker.errorLog[10].message).toContain(
+        'Something went really wrong, but be cool'
+      )
+      expect(cacheWorker.errorLog[20].message).toContain(
+        'Something went really wrong, but be cool'
+      )
+      expect(cacheWorker.errorLog.length).toEqual(21)
+    },
+    EXTENDED_JEST_TIMEOUT
+  )
+  test(
+    'does not crash if a cache value does not get updated for some reason',
     async () => {
       global.server.use(
         serloApi.mutation('_updateCache', (req, res, ctx) => {
           /* eslint-disable @typescript-eslint/no-unsafe-call */
+          if (req.body?.variables!.includes('de.serlo.org/api/key20')) {
+            return res(
+              ctx.errors([
+                {
+                  message:
+                    'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm',
+                },
+              ])
+            )
+          }
+          return res(
+            ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
+          )
+        })
+      )
+      await cacheWorker.update([...fakeCacheKeys])
+      expect(cacheWorker.okLog.length).toEqual(2)
+      expect(cacheWorker.hasSucceeded()).toBeFalsy()
+      expect(cacheWorker.errorLog[0].message).toContain(
+        'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
+      )
+      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(1)
+    },
+    EXTENDED_JEST_TIMEOUT
+  )
+  test(
+    'bisect requests with error in order to update all others that are ok',
+    async () => {
+      global.server.use(
+        serloApi.mutation('_updateCache', (req, res, ctx) => {
           if (req.body?.variables!.includes('de.serlo.org/api/key1')) {
             return res(
               ctx.errors([

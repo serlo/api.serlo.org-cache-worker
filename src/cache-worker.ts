@@ -121,17 +121,16 @@ export class CacheWorker implements AbstractCacheWorker {
   private async getResponse(
     task: Task
   ): Promise<{ response: GraphQLResponse | Error; hasError: boolean }> {
-    let response: GraphQLResponse = {}
+    let response: GraphQLResponse | Error = {}
     let hasError = false
     try {
       response = await this.requestUpdateCache(task.keys)
       if (response.errors) {
         hasError = true
-        return { response, hasError }
       }
     } catch (error) {
       hasError = true
-      return { response: error as Error, hasError }
+      response = error as Error
     }
     return { response, hasError }
   }
@@ -167,8 +166,8 @@ export class CacheWorker implements AbstractCacheWorker {
       return
     }
     task.numberOfRetries++
-    await this.retry(task)
     await wait(1)
+    await this.retry(task)
   }
 
   private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
