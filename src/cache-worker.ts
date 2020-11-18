@@ -142,7 +142,7 @@ export class CacheWorker implements AbstractCacheWorker {
     }
     return { response, hasError }
   }
-  
+
   private async requestUpdateCache(
     cacheKeys: string[]
   ): Promise<GraphQLResponse> {
