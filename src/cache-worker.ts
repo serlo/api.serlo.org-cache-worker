@@ -19,17 +19,15 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-/* eslint-disable import/no-extraneous-dependencies*/
+/* eslint-disable import/no-extraneous-dependencies */
 import { GraphQLResponse } from 'apollo-server-types'
 import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
 import { splitEvery } from 'ramda'
 
-import { wait, Stack } from './utils'
-
 /**
  * Cache Worker of Serlo's API
- * makes the API to cache values of some chosen keys.
+ * makes the API to update cache values of some chosen keys.
  * The user has to edit the file cache-keys.json for that.
  * Add environment variable PAGINATION in order to detemine
  * how many keys are going to be requested to be updated
@@ -51,7 +49,7 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private pagination: number
 
-  private tasks!: Stack<Task>
+  private tasks: Stack<Task> = new Stack<Task>()
 
   public constructor({
     apiEndpoint,
@@ -89,23 +87,13 @@ export class CacheWorker implements AbstractCacheWorker {
     if (keys.length === 0) {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
-    this.tasks = this.makeStackOutOfKeys(keys, this.pagination)
+    splitEvery(this.pagination, keys).forEach((keys) => { this.tasks.push({ keys, numberOfRetries: 0 })})
     await this.makeRequests()
-  }
-
-  private makeStackOutOfKeys(keys: string[], pagination: number): Stack<Task> {
-    const chunksOfKeys = splitEvery(pagination, keys)
-    const tasks = new Stack<Task>()
-    chunksOfKeys.forEach((chunk) => {
-      const task = { keys: chunk, numberOfRetries: 0 }
-      tasks.push(task)
-    })
-    return tasks
   }
 
   private async makeRequests() {
     while (!this.tasks.isEmpty()) {
-      const task = this.tasks.peekAndPop()
+      const task = this.tasks.pop()!
       const { response, hasError } = await this.getResponse(task)
       if (hasError && task.keys.length > 1) {
         this.bisect(task)
@@ -150,10 +138,8 @@ export class CacheWorker implements AbstractCacheWorker {
   }
 
   private bisect(task: Task) {
-    const splittedKeys = splitEvery(task.keys.length / 2, task.keys)
-    splittedKeys.forEach((keys) => {
-      const task = { keys, numberOfRetries: 0 }
-      this.tasks.push(task)
+    splitEvery(task.keys.length / 2, task.keys).forEach((keys) => {
+      this.tasks.push({ keys, numberOfRetries: 0 })
     })
   }
 
@@ -199,4 +185,42 @@ interface AbstractCacheWorker {
 interface Task {
   keys: string[]
   numberOfRetries: number
+}
+
+async function wait(seconds = 1) {
+  return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
+}
+
+class Stack<T> {
+  private stack: T[]
+
+  public constructor() {
+    this.stack = new Array<T>()
+  }
+
+  public push(element: T) {
+    this.stack.push(element)
+  }
+
+  public pop() {
+    if (this.isEmpty()) throw new StackUnderflowError('Stack is empty')
+    return this.stack.pop()
+  }
+
+  public peek() {
+    if (this.isEmpty()) throw new StackUnderflowError('Stack is empty')
+    return this.stack[this.stack.length - 1]
+  }
+
+  public isEmpty() {
+    return !this.stack.length
+  }
+
+}
+
+class StackUnderflowError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'StackUnderflowError'
+  }
 }
