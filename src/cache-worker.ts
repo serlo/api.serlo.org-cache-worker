@@ -171,7 +171,13 @@ export class CacheWorker implements AbstractCacheWorker {
    * See the errorLog for a more detailed description of the errors.
    */
   public hasSucceeded(): boolean {
-    if (this.errorLog.length > 0 || this.okLog.length == 0) {
+    // TODO: when the cache worker is stable enough
+    // change it to simply `return this.errorLog.length === 0` or
+    // deprecate it.
+    // The okLog check is still necessary in case an error occur before
+    // anything has been logged (v.g. the error that the provided URL
+    // is not absolute)
+    if (this.errorLog.length > 0 || this.okLog.length === 0) {
       return false
     }
     return true
