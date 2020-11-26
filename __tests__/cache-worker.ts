@@ -24,9 +24,7 @@ import { range } from 'ramda'
 
 import { CacheWorker } from '../src/cache-worker'
 
-const fakeCacheKeys = range(0, 21).map(
-  (x) => `de.serlo.org/api/key${x}`
-)
+const fakeCacheKeys = range(0, 21).map((x) => `de.serlo.org/api/key${x}`)
 
 let cacheWorker: CacheWorker
 
