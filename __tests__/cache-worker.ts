@@ -20,10 +20,11 @@
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
 import { graphql } from 'msw'
+import { range } from 'ramda'
 
 import { CacheWorker } from '../src/cache-worker'
 
-const fakeCacheKeys = [...Array(21).keys()].map(
+const fakeCacheKeys = range(0, 21).map(
   (x) => `de.serlo.org/api/key${x}`
 )
 
