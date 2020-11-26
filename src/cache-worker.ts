@@ -25,7 +25,6 @@ import { GraphQLClient, gql } from 'graphql-request'
 import jwt from 'jsonwebtoken'
 import { splitEvery } from 'ramda'
 
-import { AbstractCacheWorker, Task } from './types'
 import { wait, Stack } from './utils'
 
 /**
@@ -189,4 +188,15 @@ export class CacheWorker implements AbstractCacheWorker {
     }
     return true
   }
+}
+
+
+interface AbstractCacheWorker {
+  errorLog: Error[]
+  update(keys: string[]): Promise<void>
+}
+
+interface Task {
+  keys: string[]
+  numberOfRetries: number
 }
