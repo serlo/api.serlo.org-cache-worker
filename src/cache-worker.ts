@@ -96,32 +96,33 @@ export class CacheWorker implements AbstractCacheWorker {
   private async makeRequests() {
     while (this.tasks.length) {
       const task = this.tasks.pop()!
-      const { response, hasError } = await this.getResponse(task)
-      if (hasError && task.keys.length > 1) {
-        this.bisect(task)
-      } else if (hasError && task.keys.length === 1) {
-        await this.retry(task)
+      const result = await this.getResponse(task)
+      if (!result.success) {
+        await this.onError(task, result)
       } else {
-        this.fillLogs(response)
+        this.fillLogs(result)
       }
     }
   }
 
-  private async getResponse(
-    task: Task
-  ): Promise<{ response: GraphQLResponse | Error; hasError: boolean }> {
-    let response: GraphQLResponse | Error = {}
-    let hasError = false
-    try {
-      response = await this.requestUpdateCache(task.keys)
-      if (response.errors) {
-        hasError = true
-      }
-    } catch (error) {
-      hasError = true
-      response = error as Error
+  private async onError(task: Task, result: ErrorResult) {
+    const BISECT_LIMIT = 1
+    if (task.keys.length > BISECT_LIMIT) {
+      this.bisect(task)
+    } else if (task.keys.length === BISECT_LIMIT) {
+      await this.retry(task)
+    } else {
+      this.fillLogs(result)
     }
-    return { response, hasError }
+  }
+
+  private async getResponse(task: Task): Promise<Result> {
+    try {
+      const response = await this.requestUpdateCache(task.keys)
+      return { response, success: true }
+    } catch (error) {
+      return { error: error as Error, success: false }
+    }
   }
 
   private async requestUpdateCache(
@@ -147,9 +148,9 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private async retry(task: Task) {
     const MAX_RETRIES = 3
-    const { response, hasError } = await this.getResponse(task)
-    if (!hasError || task.numberOfRetries >= MAX_RETRIES) {
-      this.fillLogs(response)
+    const result = await this.getResponse(task)
+    if (result.success || task.numberOfRetries >= MAX_RETRIES) {
+      this.fillLogs(result)
       return
     }
     task.numberOfRetries++
@@ -157,11 +158,11 @@ export class CacheWorker implements AbstractCacheWorker {
     await this.retry(task)
   }
 
-  private fillLogs(graphQLResponse: GraphQLResponse | Error): void {
-    if (graphQLResponse instanceof Error) {
-      this.errorLog.push(graphQLResponse)
+  private fillLogs(result: Result): void {
+    if (!result.success) {
+      this.errorLog.push(result.error)
     } else {
-      this.okLog.push(graphQLResponse)
+      this.okLog.push(result.response)
     }
   }
 
@@ -195,6 +196,15 @@ interface Task {
 }
 
 type Stack<T> = Pick<Array<T>, 'push' | 'pop' | 'length'>
+interface SuccessResult {
+  success: true
+  response: GraphQLResponse
+}
+interface ErrorResult {
+  success: false
+  error: Error
+}
+type Result = ErrorResult | SuccessResult
 
 async function wait(seconds = 1) {
   return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
