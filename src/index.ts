@@ -23,45 +23,46 @@
 import cacheKeys from './cache-keys.json'
 import { CacheWorker } from './cache-worker'
 
-// TODO: add tests to index.ts
-
-start()
-
-function start() {
-  const cacheWorker = new CacheWorker({
-    apiEndpoint: process.env.SERLO_ORG_HOST,
-    secret: process.env.SECRET,
-    service: process.env.SERVICE,
-    pagination: process.env.PAGINATION,
-  })
-
-  console.log('Updating cache values of the following keys:', cacheKeys)
-
-  // TODO: maybe enable this eslint rule this check and fix it properly
-  /* eslint-disable @typescript-eslint/no-floating-promises */
-  run({
-    cacheWorker,
-    cacheKeys,
-  })
-}
-
 interface Config {
   cacheWorker: CacheWorker
   cacheKeys: string[]
 }
 
+void start().then(() => {})
+
+async function start() {
+  const pagination = process.env.PAGINATION
+  if (pagination !== undefined && pagination <= 0) {
+    throw new Error(
+      'NonPositivePaginationError: pagination has to be a positive number'
+    )
+  }
+
+  const cacheWorker = new CacheWorker({
+    apiEndpoint: process.env.SERLO_ORG_HOST,
+    secret: process.env.SECRET,
+    service: process.env.SERVICE,
+    pagination,
+  })
+
+  // TODO: enable logging to file.
+  console.log('Updating cache values of the following keys:', cacheKeys)
+  await run({
+    cacheWorker,
+    cacheKeys,
+  })
+}
+
 async function run(config: Config): Promise<void> {
   const { cacheWorker, cacheKeys } = config
   await cacheWorker.update(cacheKeys)
-  if (cacheWorker.hasFailed()) {
+  if (cacheWorker.hasSucceeded()) {
+    declareSuccess()
+  } else {
     declareFailure(cacheWorker.errorLog)
-    return
   }
-  declareSuccess()
 }
 
-// TODO: at declare* accept writer as param, in order to enable
-// writing to a log file.
 function declareFailure(errors: Error[]) {
   console.warn(
     'Cache update was run but the following errors were found',
