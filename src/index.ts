@@ -23,19 +23,12 @@
 import cacheKeys from './cache-keys.json'
 import { CacheWorker } from './cache-worker'
 
-interface Config {
-  cacheWorker: CacheWorker
-  cacheKeys: string[]
-}
-
-void start().then(() => {})
+void start()
 
 async function start() {
   const pagination = process.env.PAGINATION
   if (pagination !== undefined && pagination <= 0) {
-    throw new Error(
-      'NonPositivePaginationError: pagination has to be a positive number'
-    )
+    throw new Error('pagination has to be a positive number')
   }
 
   const cacheWorker = new CacheWorker({
@@ -47,29 +40,15 @@ async function start() {
 
   // TODO: enable logging to file.
   console.log('Updating cache values of the following keys:', cacheKeys)
-  await run({
-    cacheWorker,
-    cacheKeys,
-  })
-}
 
-async function run(config: Config): Promise<void> {
-  const { cacheWorker, cacheKeys } = config
   await cacheWorker.update(cacheKeys)
+
   if (cacheWorker.hasSucceeded()) {
-    declareSuccess()
+    console.log('Cache successfully updated')
   } else {
-    declareFailure(cacheWorker.errorLog)
+    console.warn(
+      'Cache updated with the following errors',
+      cacheWorker.errorLog
+    )
   }
-}
-
-function declareFailure(errors: Error[]) {
-  console.warn(
-    'Cache update was run but the following errors were found',
-    errors
-  )
-}
-
-function declareSuccess() {
-  console.log('Cache successfully updated')
 }
