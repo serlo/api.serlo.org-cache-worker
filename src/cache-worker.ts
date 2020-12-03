@@ -33,7 +33,7 @@ import { splitEvery } from 'ramda'
  * how many keys are going to be requested to be updated
  * each time
  */
-export class CacheWorker implements AbstractCacheWorker {
+export class CacheWorker {
   private grahQLClient: GraphQLClient
 
   /** The successful responses from Serlo's API */
@@ -95,7 +95,7 @@ export class CacheWorker implements AbstractCacheWorker {
 
   private async makeRequests() {
     while (this.tasks.length) {
-      const task = this.tasks.pop()!
+      const task = this.tasks.pop() as Task
       const result = await this.getResponse(task)
       if (!result.success) {
         await this.onError(task, result)
@@ -183,11 +183,6 @@ export class CacheWorker implements AbstractCacheWorker {
     }
     return true
   }
-}
-
-interface AbstractCacheWorker {
-  errorLog: Error[]
-  update(keys: string[]): Promise<void>
 }
 
 interface Task {
