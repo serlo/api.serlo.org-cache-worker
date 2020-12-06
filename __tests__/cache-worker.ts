@@ -60,60 +60,6 @@ describe('Update-cache worker', () => {
     expect(cacheWorker.hasSucceeded()).toBeTruthy()
   })
   test(
-    'does not crash if _updateCache does not work',
-    async () => {
-      global.server.use(
-        serloApi.mutation('_updateCache', (_req, res, ctx) => {
-          return res(
-            ctx.errors([
-              {
-                message: "_updateCache didn't work at all, but be cool",
-              },
-            ])
-          )
-        })
-      )
-      await cacheWorker.update([...fakeCacheKeys])
-      expect(cacheWorker.okLog.length).toEqual(0)
-      expect(cacheWorker.hasSucceeded()).toBeFalsy()
-      expect(cacheWorker.errorLog[0].message).toContain(
-        "_updateCache didn't work at all, but be cool"
-      )
-      expect(cacheWorker.errorLog[10].message).toContain(
-        "_updateCache didn't work at all, but be cool"
-      )
-      expect(cacheWorker.errorLog[20].message).toContain(
-        "_updateCache didn't work at all, but be cool"
-      )
-      expect(cacheWorker.errorLog.length).toEqual(21)
-    },
-    EXTENDED_JEST_TIMEOUT
-  )
-  test(
-    'does not crash if it receives an error object',
-    async () => {
-      global.server.use(
-        serloApi.mutation('_updateCache', () => {
-          throw Error('Something went really wrong, but be cool')
-        })
-      )
-      await cacheWorker.update([...fakeCacheKeys])
-      expect(cacheWorker.okLog.length).toEqual(0)
-      expect(cacheWorker.hasSucceeded()).toBeFalsy()
-      expect(cacheWorker.errorLog[0].message).toContain(
-        'Something went really wrong, but be cool'
-      )
-      expect(cacheWorker.errorLog[10].message).toContain(
-        'Something went really wrong, but be cool'
-      )
-      expect(cacheWorker.errorLog[20].message).toContain(
-        'Something went really wrong, but be cool'
-      )
-      expect(cacheWorker.errorLog.length).toEqual(21)
-    },
-    EXTENDED_JEST_TIMEOUT
-  )
-  test(
     'does not crash if a cache value does not get updated for some reason',
     async () => {
       global.server.use(
