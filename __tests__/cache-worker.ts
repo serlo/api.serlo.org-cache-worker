@@ -65,7 +65,7 @@ describe('Update-cache worker', () => {
       global.server.use(
         serloApi.mutation('_updateCache', (req, res, ctx) => {
           /* eslint-disable @typescript-eslint/no-unsafe-call */
-          if (req.body?.variables!.includes('de.serlo.org/api/key20')) {
+          if (req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key20')) {
             return res(
               ctx.errors([
                 {
@@ -95,7 +95,7 @@ describe('Update-cache worker', () => {
     async () => {
       global.server.use(
         serloApi.mutation('_updateCache', (req, res, ctx) => {
-          if (req.body?.variables!.includes('de.serlo.org/api/key1')) {
+          if (req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key1')) {
             return res(
               ctx.errors([
                 {
@@ -105,7 +105,7 @@ describe('Update-cache worker', () => {
               ])
             )
           }
-          if (req.body?.variables!.includes('de.serlo.org/api/key8')) {
+          if (req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key8')) {
             return res(
               ctx.errors([
                 {

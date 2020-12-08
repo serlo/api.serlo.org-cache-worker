@@ -136,7 +136,7 @@ export class CacheWorker {
         _updateCache(keys: $cacheKeys)
       }
     `
-    const variables = cacheKeys
+    const variables = { cacheKeys }
     return this.grahQLClient.request(query, variables)
   }
 
