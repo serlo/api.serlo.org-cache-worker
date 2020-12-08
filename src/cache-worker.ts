@@ -95,24 +95,25 @@ export class CacheWorker {
 
   private async makeRequests() {
     while (this.tasks.length) {
+      const MAX_RETRIES = 3
+      const BISECT_LIMIT = 1
       const task = this.tasks.pop() as Task
       const result = await this.getResponse(task)
-      if (!result.success) {
-        await this.onError(task, result)
+      if (result.success) {
+        this.okLog.push(result.response)
       } else {
-        this.fillLogs(result)
+        if (task.keys.length > BISECT_LIMIT) {
+          this.bisect(task)
+        } else if (task.numberOfRetries < MAX_RETRIES) {
+          this.tasks.push({
+            ...task,
+            numberOfRetries: task.numberOfRetries + 1,
+          })
+          await wait(1)
+        } else {
+          this.errorLog.push(result.error)
+        }
       }
-    }
-  }
-
-  private async onError(task: Task, result: ErrorResult) {
-    const BISECT_LIMIT = 1
-    if (task.keys.length > BISECT_LIMIT) {
-      this.bisect(task)
-    } else if (task.keys.length === BISECT_LIMIT) {
-      await this.retry(task)
-    } else {
-      this.fillLogs(result)
     }
   }
 
@@ -144,26 +145,6 @@ export class CacheWorker {
     splitEvery(task.keys.length / 2, task.keys).forEach((keys) => {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
-  }
-
-  private async retry(task: Task) {
-    const MAX_RETRIES = 3
-    const result = await this.getResponse(task)
-    if (result.success || task.numberOfRetries >= MAX_RETRIES) {
-      this.fillLogs(result)
-      return
-    }
-    task.numberOfRetries++
-    await wait(1)
-    await this.retry(task)
-  }
-
-  private fillLogs(result: Result): void {
-    if (!result.success) {
-      this.errorLog.push(result.error)
-    } else {
-      this.okLog.push(result.response)
-    }
   }
 
   /**

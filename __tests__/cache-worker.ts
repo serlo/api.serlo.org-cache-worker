@@ -65,7 +65,9 @@ describe('Update-cache worker', () => {
       global.server.use(
         serloApi.mutation('_updateCache', (req, res, ctx) => {
           /* eslint-disable @typescript-eslint/no-unsafe-call */
-          if (req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key20')) {
+          if (
+            req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key20')
+          ) {
             return res(
               ctx.errors([
                 {
@@ -95,7 +97,9 @@ describe('Update-cache worker', () => {
     async () => {
       global.server.use(
         serloApi.mutation('_updateCache', (req, res, ctx) => {
-          if (req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key1')) {
+          if (
+            req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key1')
+          ) {
             return res(
               ctx.errors([
                 {
@@ -105,7 +109,9 @@ describe('Update-cache worker', () => {
               ])
             )
           }
-          if (req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key8')) {
+          if (
+            req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key8')
+          ) {
             return res(
               ctx.errors([
                 {
@@ -133,3 +139,30 @@ describe('Update-cache worker', () => {
     EXTENDED_JEST_TIMEOUT
   )
 })
+
+function setupErrorsAtApi(wrongKeys: { wrongKey: string; maxWrong: number }[]) {
+  const retry: Record<string, number> = {}
+  global.server.use(
+    serloApi.mutation('_updateCache', (req, res, ctx) => {
+      if (
+        wrongKeys.some((wrongKey) =>
+          req.body?.variables!.cacheKeys!.includes(wrongKey)
+        )
+      ) {
+        if (retry[wrongKey] === undefined) retry[wrongKey] = 0
+        retry[wrongKey]++
+        if (retry[wrongKey] < maxWrong) {
+          return res(
+            ctx.errors([
+              {
+                message:
+                  'Something went wrong while updating value of "de.serlo.org/api/key1"',
+              },
+            ])
+          )
+        }
+      }
+      return res(ctx.data({ data: { _updateCache: null } }))
+    })
+  )
+}
