@@ -62,31 +62,12 @@ describe('Update-cache worker', () => {
   test(
     'does not crash if a cache value does not get updated for some reason',
     async () => {
-      global.server.use(
-        serloApi.mutation('_updateCache', (req, res, ctx) => {
-          /* eslint-disable @typescript-eslint/no-unsafe-call */
-          if (
-            req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key20')
-          ) {
-            return res(
-              ctx.errors([
-                {
-                  message:
-                    'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm',
-                },
-              ])
-            )
-          }
-          return res(
-            ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
-          )
-        })
-      )
+      setUpErrosAtApi(['de.serlo.org/api/key20'])
       await cacheWorker.update([...fakeCacheKeys])
       expect(cacheWorker.okLog.length).toEqual(2)
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
-        'Something went wrong while updating value of "de.serlo.org/api/key20", but keep calm'
+        'Something went wrong while updating value of "de.serlo.org/api/key20"'
       )
       expect(cacheWorker.errorLog.length).not.toBeGreaterThan(1)
     },
@@ -95,37 +76,7 @@ describe('Update-cache worker', () => {
   test(
     'bisect requests with error in order to update all others that are ok',
     async () => {
-      global.server.use(
-        serloApi.mutation('_updateCache', (req, res, ctx) => {
-          if (
-            req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key1')
-          ) {
-            return res(
-              ctx.errors([
-                {
-                  message:
-                    'Something went wrong while updating value of "de.serlo.org/api/key1"',
-                },
-              ])
-            )
-          }
-          if (
-            req.body?.variables!.cacheKeys.includes('de.serlo.org/api/key8')
-          ) {
-            return res(
-              ctx.errors([
-                {
-                  message:
-                    'Something went wrong while updating value of "de.serlo.org/api/key8"',
-                },
-              ])
-            )
-          }
-          return res(
-            ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
-          )
-        })
-      )
+      setUpErrosAtApi(['de.serlo.org/api/key1', 'de.serlo.org/api/key8'])
       await cacheWorker.update([...fakeCacheKeys])
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
@@ -140,29 +91,27 @@ describe('Update-cache worker', () => {
   )
 })
 
-function setupErrorsAtApi(wrongKeys: { wrongKey: string; maxWrong: number }[]) {
-  const retry: Record<string, number> = {}
+function setUpErrosAtApi(wrongKeys: string[]) {
   global.server.use(
     serloApi.mutation('_updateCache', (req, res, ctx) => {
+      /* eslint-disable @typescript-eslint/no-unsafe-call */
+      const cacheKeys = req.body?.variables!.cacheKeys
       if (
         wrongKeys.some((wrongKey) =>
           req.body?.variables!.cacheKeys!.includes(wrongKey)
         )
       ) {
-        if (retry[wrongKey] === undefined) retry[wrongKey] = 0
-        retry[wrongKey]++
-        if (retry[wrongKey] < maxWrong) {
-          return res(
-            ctx.errors([
-              {
-                message:
-                  'Something went wrong while updating value of "de.serlo.org/api/key1"',
-              },
-            ])
-          )
-        }
+        return res(
+          ctx.errors([
+            {
+              message: `Something went wrong while updating value of "${cacheKeys}"`,
+            },
+          ])
+        )
       }
-      return res(ctx.data({ data: { _updateCache: null } }))
+      return res(
+        ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
+      )
     })
   )
 }
