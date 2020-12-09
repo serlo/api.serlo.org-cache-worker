@@ -24,7 +24,7 @@ import { range } from 'ramda'
 
 import { CacheWorker } from '../src/cache-worker'
 
-const fakeCacheKeys = range(0, 21).map((x) => `de.serlo.org/api/key${x}`)
+const fakeCacheKeys = range(0, 11).map((x) => `de.serlo.org/api/key${x}`)
 
 let cacheWorker: CacheWorker
 
@@ -32,14 +32,12 @@ const apiEndpoint = 'https://api.serlo.org/graphql'
 
 const serloApi = graphql.link(apiEndpoint)
 
-const EXTENDED_JEST_TIMEOUT = 500000
-
 beforeEach(() => {
   cacheWorker = new CacheWorker({
     apiEndpoint: apiEndpoint,
     service: 'Cache Service',
     secret: 'blllkjadf',
-    pagination: 10, // default is 100, 10 is just for making less overhead by testing
+    pagination: 5, // default is 100, 5 is just to speed up tests
   })
 
   global.server.use(
@@ -62,17 +60,20 @@ describe('Update-cache worker', () => {
   test(
     'does not crash if a cache value does not get updated for some reason',
     async () => {
-      setUpErrosAtApi(['de.serlo.org/api/key20'])
+      setUpErrosAtApi(['de.serlo.org/api/key10'])
       await cacheWorker.update([...fakeCacheKeys])
       expect(cacheWorker.okLog.length).toEqual(2)
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
-        'Something went wrong while updating value of "de.serlo.org/api/key20"'
+        'Something went wrong while updating value of "de.serlo.org/api/key10"'
       )
       expect(cacheWorker.errorLog.length).not.toBeGreaterThan(1)
-    },
-    EXTENDED_JEST_TIMEOUT
+    }
   )
+
+  // Not possible to make it faster due to the wait function in the cache worker
+  const EXTENDED_TIMEOUT = 10000
+
   test(
     'bisect requests with error in order to update all others that are ok',
     async () => {
@@ -86,8 +87,7 @@ describe('Update-cache worker', () => {
         'Something went wrong while updating value of "de.serlo.org/api/key1"'
       )
       expect(cacheWorker.errorLog.length).not.toBeGreaterThan(2)
-    },
-    EXTENDED_JEST_TIMEOUT
+    }, EXTENDED_TIMEOUT
   )
 })
 
