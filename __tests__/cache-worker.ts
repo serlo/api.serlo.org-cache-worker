@@ -21,7 +21,6 @@
  */
 import { graphql } from 'msw'
 import { range } from 'ramda'
-
 import { CacheWorker } from '../src/cache-worker'
 
 const fakeCacheKeys = range(0, 11).map((x) => `de.serlo.org/api/key${x}`)
@@ -57,19 +56,6 @@ describe('Update-cache worker', () => {
     expect(cacheWorker.okLog.length).toEqual(3)
     expect(cacheWorker.hasSucceeded()).toBeTruthy()
   })
-  test(
-    'does not crash if a cache value does not get updated for some reason',
-    async () => {
-      setUpErrosAtApi(['de.serlo.org/api/key10'])
-      await cacheWorker.update([...fakeCacheKeys])
-      expect(cacheWorker.okLog.length).toEqual(2)
-      expect(cacheWorker.hasSucceeded()).toBeFalsy()
-      expect(cacheWorker.errorLog[0].message).toContain(
-        'Something went wrong while updating value of "de.serlo.org/api/key10"'
-      )
-      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(1)
-    }
-  )
 
   // Not possible to make it faster due to the wait function in the cache worker
   const EXTENDED_TIMEOUT = 10000
@@ -77,7 +63,7 @@ describe('Update-cache worker', () => {
   test(
     'bisect requests with error in order to update all others that are ok',
     async () => {
-      setUpErrosAtApi(['de.serlo.org/api/key1', 'de.serlo.org/api/key8'])
+      setUpErrorsAtApi(['de.serlo.org/api/key1', 'de.serlo.org/api/key8'])
       await cacheWorker.update([...fakeCacheKeys])
       expect(cacheWorker.hasSucceeded()).toBeFalsy()
       expect(cacheWorker.errorLog[0].message).toContain(
@@ -87,27 +73,40 @@ describe('Update-cache worker', () => {
         'Something went wrong while updating value of "de.serlo.org/api/key1"'
       )
       expect(cacheWorker.errorLog.length).not.toBeGreaterThan(2)
-    }, EXTENDED_TIMEOUT
+    },
+    EXTENDED_TIMEOUT
   )
+  test('retries to update value if updating fails sometimes', async () => {
+    setUpErrorsAtApi(['de.serlo.org/api/key10'], 2)
+    await cacheWorker.update([...fakeCacheKeys])
+    expect(cacheWorker.okLog.length).toEqual(3)
+    expect(cacheWorker.hasSucceeded()).toBeTruthy()
+  })
 })
 
-function setUpErrosAtApi(wrongKeys: string[]) {
+function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
+  let numberOfRetries = 0
   global.server.use(
     serloApi.mutation('_updateCache', (req, res, ctx) => {
-      /* eslint-disable @typescript-eslint/no-unsafe-call */
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       const cacheKeys = req.body?.variables!.cacheKeys
       if (
+        /* eslint-disable @typescript-eslint/no-unsafe-member-access */
         wrongKeys.some((wrongKey) =>
           req.body?.variables!.cacheKeys!.includes(wrongKey)
         )
       ) {
-        return res(
-          ctx.errors([
-            {
-              message: `Something went wrong while updating value of "${cacheKeys}"`,
-            },
-          ])
-        )
+        if (numberOfRetries >= maxRetriesBeforeWorking) {
+          numberOfRetries++
+          return res(
+            ctx.errors([
+              {
+                /* eslint-disable @typescript-eslint/restrict-template-expressions */
+                message: `Something went wrong while updating value of "${cacheKeys}"`,
+              },
+            ])
+          )
+        }
       }
       return res(
         ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
