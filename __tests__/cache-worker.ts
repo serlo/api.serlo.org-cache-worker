@@ -21,6 +21,7 @@
  */
 import { graphql } from 'msw'
 import { range } from 'ramda'
+
 import { CacheWorker } from '../src/cache-worker'
 
 const fakeCacheKeys = range(0, 11).map((x) => `de.serlo.org/api/key${x}`)
@@ -52,9 +53,9 @@ beforeEach(() => {
 
 describe('Update-cache worker', () => {
   test('successfully calls _updateCache', async () => {
-    await cacheWorker.update(fakeCacheKeys)
-    expect(cacheWorker.okLog.length).toEqual(3)
-    expect(cacheWorker.hasSucceeded()).toBeTruthy()
+    const { okLog, errorLog } = await cacheWorker.update(fakeCacheKeys)
+    expect(okLog.length).toEqual(3)
+    expect(errorLog.length).toEqual(0)
   })
 
   // Not possible to make it faster due to the wait function in the cache worker
@@ -63,24 +64,23 @@ describe('Update-cache worker', () => {
   test(
     'bisect requests with error in order to update all others that are ok',
     async () => {
-      setUpErrorsAtApi(['de.serlo.org/api/key1', 'de.serlo.org/api/key8'])
-      await cacheWorker.update([...fakeCacheKeys])
-      expect(cacheWorker.hasSucceeded()).toBeFalsy()
-      expect(cacheWorker.errorLog[0].message).toContain(
-        'Something went wrong while updating value of "de.serlo.org/api/key8"'
+      setUpErrorsAtApi([fakeCacheKeys[1], fakeCacheKeys[7]])
+      const { errorLog } = await cacheWorker.update(fakeCacheKeys)
+      expect(errorLog[0].message).toContain(
+        `Something went wrong while updating value of "${fakeCacheKeys[7]}"`
       )
-      expect(cacheWorker.errorLog[1].message).toContain(
-        'Something went wrong while updating value of "de.serlo.org/api/key1"'
+      expect(errorLog[1].message).toContain(
+        `Something went wrong while updating value of "${fakeCacheKeys[1]}"`
       )
-      expect(cacheWorker.errorLog.length).not.toBeGreaterThan(2)
+      expect(errorLog.length).not.toBeGreaterThan(2)
     },
     EXTENDED_TIMEOUT
   )
-  test('retries to update value if updating fails sometimes', async () => {
-    setUpErrorsAtApi(['de.serlo.org/api/key10'], 2)
-    await cacheWorker.update([...fakeCacheKeys])
-    expect(cacheWorker.okLog.length).toEqual(3)
-    expect(cacheWorker.hasSucceeded()).toBeTruthy()
+  test('retries to update value if updating fails maximum twice', async () => {
+    setUpErrorsAtApi([fakeCacheKeys[10]], 2)
+    const { okLog, errorLog } = await cacheWorker.update(fakeCacheKeys)
+    expect(okLog.length).toEqual(3)
+    expect(errorLog.length).toEqual(0)
   })
 })
 
@@ -93,6 +93,7 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
       if (
         /* eslint-disable @typescript-eslint/no-unsafe-member-access */
         wrongKeys.some((wrongKey) =>
+          /* eslint-disable @typescript-eslint/no-unsafe-call */
           req.body?.variables!.cacheKeys!.includes(wrongKey)
         )
       ) {

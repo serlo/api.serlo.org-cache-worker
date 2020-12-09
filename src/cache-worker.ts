@@ -29,7 +29,7 @@ import { splitEvery } from 'ramda'
  * Cache Worker of Serlo's API
  * makes the API to update cache values of some chosen keys.
  * The user has to edit the file cache-keys.json for that.
- * Add environment variable PAGINATION in order to detemine
+ * Add environment variable PAGINATION in order to determine
  * how many keys are going to be requested to be updated
  * each time
  */
@@ -83,7 +83,9 @@ export class CacheWorker {
    * Requests Serlo's API to update its cache according to chosen keys.
    * @param keys an array of keys(strings) whose values should to be cached
    */
-  public async update(keys: string[]): Promise<void> {
+  public async update(
+    keys: string[]
+  ): Promise<{ errorLog: Error[]; okLog: GraphQLResponse[] }> {
     if (keys.length === 0) {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
@@ -91,6 +93,7 @@ export class CacheWorker {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
     await this.makeRequests()
+    return { errorLog: this.errorLog, okLog: this.okLog }
   }
 
   private async makeRequests() {
@@ -142,6 +145,7 @@ export class CacheWorker {
   }
 
   private bisect(task: Task) {
+    // TODO: make easier to change the division from 2 to 3, 4 etc.
     splitEvery(task.keys.length / 2, task.keys).forEach((keys) => {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
@@ -157,8 +161,7 @@ export class CacheWorker {
     // change it to simply `return this.errorLog.length === 0` or
     // deprecate it.
     // The okLog check is still necessary in case an error occur before
-    // anything has been logged (v.g. the error that the provided URL
-    // is not absolute)
+    // anything has been logged.
     if (this.errorLog.length > 0 || this.okLog.length === 0) {
       return false
     }

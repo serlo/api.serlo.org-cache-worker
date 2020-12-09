@@ -41,14 +41,11 @@ async function start() {
   // TODO: enable logging to file.
   console.log('Updating cache values of the following keys:', cacheKeys)
 
-  await cacheWorker.update(cacheKeys)
+  const { errorLog } = await cacheWorker.update(cacheKeys)
 
   if (cacheWorker.hasSucceeded()) {
     console.log('Cache successfully updated')
   } else {
-    console.warn(
-      'Cache updated with the following errors',
-      cacheWorker.errorLog
-    )
+    console.warn('Cache updated with the following errors', errorLog)
   }
 }
