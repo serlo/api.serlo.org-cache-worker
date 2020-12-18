@@ -38,7 +38,6 @@ async function start() {
     pagination,
   })
 
-  // TODO: enable logging to file.
   console.log('Updating cache values of the following keys:', cacheKeys)
 
   const { errorLog } = await cacheWorker.update(cacheKeys)

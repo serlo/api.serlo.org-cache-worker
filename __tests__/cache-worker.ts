@@ -24,13 +24,9 @@ import { range } from 'ramda'
 
 import { CacheWorker } from '../src/cache-worker'
 
-const fakeCacheKeys = range(0, 11).map((x) => `de.serlo.org/api/key${x}`)
-
-let cacheWorker: CacheWorker
-
 const apiEndpoint = 'https://api.serlo.org/graphql'
-
-const serloApi = graphql.link(apiEndpoint)
+let cacheWorker: CacheWorker
+const fakeCacheKeys = range(0, 11).map((x) => `de.serlo.org/api/key${x}`)
 
 beforeEach(() => {
   cacheWorker = new CacheWorker({
@@ -39,79 +35,57 @@ beforeEach(() => {
     secret: 'blllkjadf',
     pagination: 5, // default is 100, 5 is just to speed up tests
   })
-
-  global.server.use(
-    serloApi.mutation('_updateCache', (_req, res, ctx) => {
-      return res(
-        ctx.data(
-          { http: { headers: {} }, data: { _updateCache: null } } // successful response
-        )
-      )
-    })
-  )
 })
 
 describe('Update-cache worker', () => {
   test('successfully calls _updateCache', async () => {
+    setUpErrorsAtApi([])
+
     const { okLog, errorLog } = await cacheWorker.update(fakeCacheKeys)
+
     expect(okLog.length).toEqual(3)
-    expect(errorLog.length).toEqual(0)
+    expect(errorLog).toEqual([])
   })
 
-  // Not possible to make it faster due to the wait function in the cache worker
-  const EXTENDED_TIMEOUT = 10000
+  test('bisect requests with error in order to update all others that are ok', async () => {
+    setUpErrorsAtApi([fakeCacheKeys[1], fakeCacheKeys[7]])
 
-  test(
-    'bisect requests with error in order to update all others that are ok',
-    async () => {
-      setUpErrorsAtApi([fakeCacheKeys[1], fakeCacheKeys[7]])
-      const { errorLog } = await cacheWorker.update(fakeCacheKeys)
-      expect(errorLog[0].message).toContain(
-        `Something went wrong while updating value of "${fakeCacheKeys[7]}"`
-      )
-      expect(errorLog[1].message).toContain(
-        `Something went wrong while updating value of "${fakeCacheKeys[1]}"`
-      )
-      expect(errorLog.length).not.toBeGreaterThan(2)
-    },
-    EXTENDED_TIMEOUT
-  )
+    const { errorLog } = await cacheWorker.update(fakeCacheKeys)
+
+    expect(errorLog.map((error) => error.message)).toEqual([
+      expect.stringContaining(`Error with "${fakeCacheKeys[7]}"`),
+      expect.stringContaining(`Error with "${fakeCacheKeys[1]}"`),
+    ])
+  }, 10000) // Not possible to make it faster due to the wait function in the cache worker
+
   test('retries to update value if updating fails maximum twice', async () => {
     setUpErrorsAtApi([fakeCacheKeys[10]], 2)
+
     const { okLog, errorLog } = await cacheWorker.update(fakeCacheKeys)
+
     expect(okLog.length).toEqual(3)
-    expect(errorLog.length).toEqual(0)
+    expect(errorLog).toEqual([])
   })
 })
 
 function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
   let numberOfRetries = 0
+
   global.server.use(
-    serloApi.mutation('_updateCache', (req, res, ctx) => {
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-      const cacheKeys = req.body?.variables!.cacheKeys
-      if (
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-        wrongKeys.some((wrongKey) =>
-          /* eslint-disable @typescript-eslint/no-unsafe-call */
-          req.body?.variables!.cacheKeys!.includes(wrongKey)
-        )
-      ) {
+    graphql.link(apiEndpoint).mutation('_updateCache', (req, res, ctx) => {
+      const cacheKeys = req.body?.variables!.cacheKeys as string[]
+
+      if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
         if (numberOfRetries >= maxRetriesBeforeWorking) {
           numberOfRetries++
+
           return res(
-            ctx.errors([
-              {
-                /* eslint-disable @typescript-eslint/restrict-template-expressions */
-                message: `Something went wrong while updating value of "${cacheKeys}"`,
-              },
-            ])
+            ctx.errors([{ message: `Error with "${cacheKeys.join(',')}"` }])
           )
         }
       }
-      return res(
-        ctx.data({ http: { headers: {} }, data: { _updateCache: null } })
-      )
+
+      return res(ctx.data({ data: { _updateCache: null } }))
     })
   )
 }
