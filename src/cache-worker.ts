@@ -29,7 +29,7 @@ import { splitEvery } from 'ramda'
  * Cache Worker of Serlo's API
  * makes the API to update cache values of some chosen keys.
  * The user has to edit the file cache-keys.json for that.
- * Add environment variable PAGINATION in order to detemine
+ * Add environment variable PAGINATION in order to determine
  * how many keys are going to be requested to be updated
  * each time
  */
@@ -83,7 +83,9 @@ export class CacheWorker {
    * Requests Serlo's API to update its cache according to chosen keys.
    * @param keys an array of keys(strings) whose values should to be cached
    */
-  public async update(keys: string[]): Promise<void> {
+  public async update(
+    keys: string[]
+  ): Promise<{ errorLog: Error[]; okLog: GraphQLResponse[] }> {
     if (keys.length === 0) {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
@@ -91,28 +93,32 @@ export class CacheWorker {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
     await this.makeRequests()
+    return { errorLog: this.errorLog, okLog: this.okLog }
   }
 
   private async makeRequests() {
     while (this.tasks.length) {
+      const MAX_RETRIES = 3
+      const BISECT_LIMIT = 1
       const task = this.tasks.pop() as Task
       const result = await this.getResponse(task)
-      if (!result.success) {
-        await this.onError(task, result)
-      } else {
-        this.fillLogs(result)
-      }
-    }
-  }
 
-  private async onError(task: Task, result: ErrorResult) {
-    const BISECT_LIMIT = 1
-    if (task.keys.length > BISECT_LIMIT) {
-      this.bisect(task)
-    } else if (task.keys.length === BISECT_LIMIT) {
-      await this.retry(task)
-    } else {
-      this.fillLogs(result)
+      if (result.success) {
+        this.okLog.push(result.response)
+      } else {
+        if (task.keys.length > BISECT_LIMIT) {
+          this.bisect(task)
+        } else if (task.numberOfRetries < MAX_RETRIES) {
+          this.tasks.push({
+            ...task,
+            numberOfRetries: task.numberOfRetries + 1,
+          })
+
+          await wait(1)
+        } else {
+          this.errorLog.push(result.error)
+        }
+      }
     }
   }
 
@@ -136,34 +142,15 @@ export class CacheWorker {
         _updateCache(keys: $cacheKeys)
       }
     `
-    const variables = cacheKeys
+    const variables = { cacheKeys }
     return this.grahQLClient.request(query, variables)
   }
 
   private bisect(task: Task) {
+    // TODO: make easier to change the division from 2 to 3, 4 etc.
     splitEvery(task.keys.length / 2, task.keys).forEach((keys) => {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
-  }
-
-  private async retry(task: Task) {
-    const MAX_RETRIES = 3
-    const result = await this.getResponse(task)
-    if (result.success || task.numberOfRetries >= MAX_RETRIES) {
-      this.fillLogs(result)
-      return
-    }
-    task.numberOfRetries++
-    await wait(1)
-    await this.retry(task)
-  }
-
-  private fillLogs(result: Result): void {
-    if (!result.success) {
-      this.errorLog.push(result.error)
-    } else {
-      this.okLog.push(result.response)
-    }
   }
 
   /**
@@ -176,8 +163,7 @@ export class CacheWorker {
     // change it to simply `return this.errorLog.length === 0` or
     // deprecate it.
     // The okLog check is still necessary in case an error occur before
-    // anything has been logged (v.g. the error that the provided URL
-    // is not absolute)
+    // anything has been logged.
     if (this.errorLog.length > 0 || this.okLog.length === 0) {
       return false
     }
