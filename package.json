@@ -18,7 +18,8 @@
     "lint:eslint": "yarn _eslint",
     "lint:prettier": "yarn _prettier --check",
     "lint:tsc": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "watch": "tsdx watch --entry src/index.ts --target node --format cjs --tsconfig tsconfig.prod.json --onSuccess \"node dist\""
   },
   "dependencies": {
     "dotenv": "^8.0.0",
