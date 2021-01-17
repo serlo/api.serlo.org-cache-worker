@@ -1,6 +1,6 @@
 {
   "name": "cache-worker",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Worker for updating cache of Serlo API",
   "license": "Apache-2.0",
   "author": "Serlo Education e.V.",
