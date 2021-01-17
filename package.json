@@ -1,7 +1,7 @@
 {
   "name": "cache-worker",
   "version": "0.3.0",
-  "description": "Worker for updating cache of Serlo API",
+  "description": "Worker for updating cache of GraphQL API in staging environment",
   "license": "Apache-2.0",
   "author": "Serlo Education e.V.",
   "main": "index.ts",
