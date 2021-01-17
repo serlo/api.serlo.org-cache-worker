@@ -19,8 +19,8 @@
  * @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  * @link      https://github.com/serlo-org/api.serlo.org for the canonical source repository
  */
-/* eslint-disable import/extensions */
-import cacheKeys from './cache-keys.json'
+import fs from 'fs'
+import path from 'path'
 import { CacheWorker } from './cache-worker'
 
 void start()
@@ -37,10 +37,13 @@ async function start() {
     service: process.env.SERVICE,
     pagination,
   })
+  
+  const cacheKeysPath = path.join(__dirname, 'cache-keys.json')
 
-  // TODO: enable logging to file.
-  console.log('Updating cache values of the following keys:', cacheKeys)
+  const data = fs.readFileSync(cacheKeysPath, 'utf8')
 
+  const cacheKeys = JSON.parse(data) as string[]
+  
   const { errorLog } = await cacheWorker.update(cacheKeys)
 
   if (cacheWorker.hasSucceeded()) {
