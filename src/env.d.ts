@@ -24,6 +24,6 @@ declare namespace NodeJS {
     SERLO_ORG_HOST: string
     SECRET: string
     SERVICE: string
-    PAGINATION: number | undefined
+    PAGINATION: string | undefined
   }
 }

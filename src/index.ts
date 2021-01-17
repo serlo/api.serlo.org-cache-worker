@@ -26,7 +26,12 @@ import { CacheWorker } from './cache-worker'
 void start()
 
 async function start() {
-  const pagination = process.env.PAGINATION
+  let pagination: number | undefined
+  if (process.env.PAGINATION == undefined) {
+    pagination = undefined
+  } else {
+    pagination = parseInt(process.env.PAGINATION)
+  }
   if (pagination !== undefined && pagination <= 0) {
     throw new Error('pagination has to be a positive number')
   }
@@ -39,9 +44,7 @@ async function start() {
   })
   
   const cacheKeysPath = path.join(__dirname, 'cache-keys.json')
-
   const data = fs.readFileSync(cacheKeysPath, 'utf8')
-
   const cacheKeys = JSON.parse(data) as string[]
   
   const { errorLog } = await cacheWorker.update(cacheKeys)
