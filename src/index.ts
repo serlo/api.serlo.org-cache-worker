@@ -37,7 +37,7 @@ async function start() {
   }
 
   const cacheWorker = new CacheWorker({
-    apiEndpoint: process.env.SERLO_ORG_HOST,
+    apiEndpoint: process.env.API_HOST,
     secret: process.env.SECRET,
     service: process.env.SERVICE,
     pagination,

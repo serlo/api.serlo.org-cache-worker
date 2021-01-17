@@ -21,7 +21,7 @@
  */
 declare namespace NodeJS {
   interface ProcessEnv {
-    SERLO_ORG_HOST: string
+    API_HOST: string
     SECRET: string
     SERVICE: string
     PAGINATION: string | undefined
