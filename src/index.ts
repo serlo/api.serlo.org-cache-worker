@@ -48,6 +48,8 @@ async function start() {
   const data = fs.readFileSync(cacheKeysPath, 'utf8')
   const cacheKeys = JSON.parse(data) as string[]
 
+  console.log('Updating cache values of the following keys:', cacheKeys)
+
   const { errorLog } = await cacheWorker.update(cacheKeys)
 
   if (cacheWorker.hasSucceeded()) {

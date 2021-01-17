@@ -102,6 +102,7 @@ export class CacheWorker {
       const BISECT_LIMIT = 1
       const task = this.tasks.pop() as Task
       const result = await this.getResponse(task)
+
       if (result.success) {
         this.okLog.push(result.response)
       } else {
@@ -112,6 +113,7 @@ export class CacheWorker {
             ...task,
             numberOfRetries: task.numberOfRetries + 1,
           })
+
           await wait(1)
         } else {
           this.errorLog.push(result.error)
