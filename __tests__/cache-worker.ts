@@ -34,6 +34,7 @@ beforeEach(() => {
     service: 'Cache Service',
     secret: 'blllkjadf',
     pagination: 5, // default is 100, 5 is just to speed up tests
+    waitTime: 0,
   })
 })
 
@@ -56,7 +57,7 @@ describe('Update-cache worker', () => {
       expect.stringContaining(`Error with "${fakeCacheKeys[7]}"`),
       expect.stringContaining(`Error with "${fakeCacheKeys[1]}"`),
     ])
-  }, 10000) // Not possible to make it faster due to the wait function in the cache worker
+  })
 
   test('retries to update value if updating fails maximum twice', async () => {
     setUpErrorsAtApi([fakeCacheKeys[10]], 2)

@@ -49,34 +49,30 @@ export class CacheWorker {
 
   private pagination: number
 
+  private waitTime: number
+
   private tasks: Stack<Task> = []
 
   public constructor({
     apiEndpoint,
     service,
     secret,
-    pagination = 100,
+    pagination,
+    waitTime,
   }: {
     apiEndpoint: string
-    service?: string
-    secret?: string
-    pagination?: number
+    service: string
+    secret: string
+    pagination: number
+    waitTime: number
   }) {
-    this.grahQLClient = new GraphQLClient(
-      apiEndpoint,
-      secret === undefined
-        ? {}
-        : {
-            headers: {
-              Authorization: `Serlo Service=${jwt.sign({}, secret, {
-                expiresIn: '2h',
-                audience: 'api.serlo.org',
-                issuer: service,
-              })}`,
-            },
-          }
-    )
+    this.grahQLClient = new GraphQLClient(apiEndpoint, {
+      headers: {
+        Authorization: `Serlo Service=${getToken({ service, secret })}`,
+      },
+    })
     this.pagination = pagination
+    this.waitTime = waitTime
   }
 
   /**
@@ -114,7 +110,7 @@ export class CacheWorker {
             numberOfRetries: task.numberOfRetries + 1,
           })
 
-          await wait(1)
+          await wait(this.waitTime)
         } else {
           this.errorLog.push(result.error)
         }
@@ -189,4 +185,12 @@ type Result = ErrorResult | SuccessResult
 
 async function wait(seconds = 1) {
   return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
+}
+
+function getToken({ secret, service }: { secret: string; service: string }) {
+  return jwt.sign({}, secret, {
+    expiresIn: '2h',
+    audience: 'api.serlo.org',
+    issuer: service,
+  })
 }

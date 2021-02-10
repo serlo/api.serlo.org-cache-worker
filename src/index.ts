@@ -27,14 +27,9 @@ import { CacheWorker } from './cache-worker'
 void start()
 
 async function start() {
-  let pagination =
-    process.env.PAGINATION === undefined
-      ? undefined
-      : parseInt(process.env.PAGINATION)
-  if (Number.isNaN(pagination)) {
-    pagination = undefined
-  }
-  if (pagination !== undefined && pagination <= 0) {
+  const pagination = parseInt(process.env.PAGINATION ?? '100')
+
+  if (Number.isNaN(pagination) || pagination <= 0) {
     throw new Error('pagination has to be a positive number')
   }
 
@@ -43,6 +38,7 @@ async function start() {
     secret: process.env.SECRET,
     service: process.env.SERVICE,
     pagination,
+    waitTime: 1,
   })
 
   const cacheKeysPath = path.join(__dirname, 'cache-keys.json')
