@@ -21,9 +21,9 @@
  */
 declare namespace NodeJS {
   interface ProcessEnv {
-    API_HOST: string
-    SECRET: string
-    SERVICE: string
-    PAGINATION: string | undefined
+    readonly API_HOST: string
+    readonly SECRET: string
+    readonly SERVICE: string
+    readonly PAGINATION: string | undefined
   }
 }
