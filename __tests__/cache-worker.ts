@@ -42,30 +42,28 @@ describe('Update-cache worker', () => {
   test('successfully calls _updateCache', async () => {
     setUpErrorsAtApi([])
 
-    const { okLog, errorLog } = await cacheWorker.update(fakeCacheKeys)
+    const errors = await cacheWorker.update(fakeCacheKeys)
 
-    expect(okLog.length).toEqual(3)
-    expect(errorLog).toEqual([])
+    expect(errors).toHaveLength(0)
   })
 
   test('bisect requests with error in order to update all others that are ok', async () => {
     setUpErrorsAtApi([fakeCacheKeys[1], fakeCacheKeys[7]])
 
-    const { errorLog } = await cacheWorker.update(fakeCacheKeys)
+    const errors = await cacheWorker.update(fakeCacheKeys)
 
-    expect(errorLog.map((error) => error.message)).toEqual([
-      expect.stringContaining(`Error with "${fakeCacheKeys[7]}"`),
-      expect.stringContaining(`Error with "${fakeCacheKeys[1]}"`),
+    expect(errors.map((error) => error.keys)).toEqual([
+      [fakeCacheKeys[7]],
+      [fakeCacheKeys[1]],
     ])
   })
 
   test('retries to update value if updating fails maximum twice', async () => {
     setUpErrorsAtApi([fakeCacheKeys[10]], 2)
 
-    const { okLog, errorLog } = await cacheWorker.update(fakeCacheKeys)
+    const errors = await cacheWorker.update(fakeCacheKeys)
 
-    expect(okLog.length).toEqual(3)
-    expect(errorLog).toEqual([])
+    expect(errors).toHaveLength(0)
   })
 })
 
@@ -80,9 +78,7 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
         if (numberOfRetries >= maxRetriesBeforeWorking) {
           numberOfRetries++
 
-          return res(
-            ctx.errors([{ message: `Error with "${cacheKeys.join(',')}"` }])
-          )
+          return res(ctx.errors([{ message: `An error occurred` }]))
         }
       }
 

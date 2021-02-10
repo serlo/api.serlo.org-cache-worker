@@ -47,11 +47,14 @@ async function start() {
 
   console.log('Updating cache values of the following keys:', cacheKeys)
 
-  const { errorLog } = await cacheWorker.update(cacheKeys)
+  const errors = await cacheWorker.update(cacheKeys)
 
-  if (cacheWorker.hasSucceeded()) {
+  if (errors.length === 0) {
     console.log('Cache successfully updated')
   } else {
-    console.warn('Cache updated with the following errors', errorLog)
+    for (const error of errors) {
+      console.warn('Error while updating the keys', error.keys)
+      console.warn('The following error was thrown', error.error)
+    }
   }
 }
