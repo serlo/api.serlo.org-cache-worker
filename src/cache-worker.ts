@@ -49,6 +49,8 @@ export class CacheWorker {
 
   private pagination: number
 
+  private waitTime: number
+
   private tasks: Stack<Task> = []
 
   public constructor({
@@ -56,11 +58,13 @@ export class CacheWorker {
     service,
     secret,
     pagination,
+    waitTime,
   }: {
     apiEndpoint: string
     service: string
     secret: string
     pagination: number
+    waitTime: number
   }) {
     this.grahQLClient = new GraphQLClient(apiEndpoint, {
       headers: {
@@ -68,6 +72,7 @@ export class CacheWorker {
       },
     })
     this.pagination = pagination
+    this.waitTime = waitTime
   }
 
   /**
@@ -105,7 +110,7 @@ export class CacheWorker {
             numberOfRetries: task.numberOfRetries + 1,
           })
 
-          await wait(1)
+          await wait(this.waitTime)
         } else {
           this.errorLog.push(result.error)
         }

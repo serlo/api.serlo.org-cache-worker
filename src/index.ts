@@ -38,6 +38,7 @@ async function start() {
     secret: process.env.SECRET,
     service: process.env.SERVICE,
     pagination,
+    waitTime: 1,
   })
 
   const cacheKeysPath = path.join(__dirname, 'cache-keys.json')
