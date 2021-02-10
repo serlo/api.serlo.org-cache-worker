@@ -36,16 +36,7 @@ import { splitEvery } from 'ramda'
 export class CacheWorker {
   private grahQLClient: GraphQLClient
 
-  /** The successful responses from Serlo's API */
-  public okLog: GraphQLResponse[] = []
-  /**
-   *  The errors that ocurred while trying
-   *  to update values of given keys.
-   *  They can be caused by the client or
-   *  by the server as well as from other
-   *  origins.
-   */
-  public errorLog: Error[] = []
+  private errors: ErrorResult[] = []
 
   private pagination: number
 
@@ -79,9 +70,7 @@ export class CacheWorker {
    * Requests Serlo's API to update its cache according to chosen keys.
    * @param keys an array of keys(strings) whose values should to be cached
    */
-  public async update(
-    keys: string[]
-  ): Promise<{ errorLog: Error[]; okLog: GraphQLResponse[] }> {
+  public async update(keys: string[]): Promise<ErrorResult[]> {
     if (keys.length === 0) {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
@@ -89,7 +78,7 @@ export class CacheWorker {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
     await this.makeRequests()
-    return { errorLog: this.errorLog, okLog: this.okLog }
+    return this.errors
   }
 
   private async makeRequests() {
@@ -97,11 +86,9 @@ export class CacheWorker {
       const MAX_RETRIES = 3
       const BISECT_LIMIT = 1
       const task = this.tasks.pop() as Task
-      const result = await this.getResponse(task)
+      const result = await this.runTask(task)
 
-      if (result.success) {
-        this.okLog.push(result.response)
-      } else {
+      if (result !== undefined) {
         if (task.keys.length > BISECT_LIMIT) {
           this.bisect(task)
         } else if (task.numberOfRetries < MAX_RETRIES) {
@@ -112,18 +99,17 @@ export class CacheWorker {
 
           await wait(this.waitTime)
         } else {
-          this.errorLog.push(result.error)
+          this.errors.push({ keys: task.keys, error: result })
         }
       }
     }
   }
 
-  private async getResponse(task: Task): Promise<Result> {
+  private async runTask(task: Task): Promise<TaskResult> {
     try {
-      const response = await this.requestUpdateCache(task.keys)
-      return { response, success: true }
+      await this.requestUpdateCache(task.keys)
     } catch (error) {
-      return { error: error as Error, success: false }
+      return toError(error)
     }
   }
 
@@ -148,43 +134,28 @@ export class CacheWorker {
       this.tasks.push({ keys, numberOfRetries: 0 })
     })
   }
-
-  /**
-   * Evaluate if the cache worker has succeeded updating the values of
-   * of all requested keys or not, in case of any error.
-   * See the errorLog for a more detailed description of the errors.
-   */
-  public hasSucceeded(): boolean {
-    // TODO: when the cache worker is stable enough
-    // change it to simply `return this.errorLog.length === 0` or
-    // deprecate it.
-    // The okLog check is still necessary in case an error occur before
-    // anything has been logged.
-    if (this.errorLog.length > 0 || this.okLog.length === 0) {
-      return false
-    }
-    return true
-  }
 }
+
+type Stack<T> = Pick<Array<T>, 'push' | 'pop' | 'length'>
 
 interface Task {
   keys: string[]
   numberOfRetries: number
 }
 
-type Stack<T> = Pick<Array<T>, 'push' | 'pop' | 'length'>
-interface SuccessResult {
-  success: true
-  response: GraphQLResponse
-}
+type TaskResult = Error | undefined
+
 interface ErrorResult {
-  success: false
   error: Error
+  keys: string[]
 }
-type Result = ErrorResult | SuccessResult
 
 async function wait(seconds = 1) {
   return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
+}
+
+function toError(error: unknown) {
+  return error instanceof Error ? error : new Error(String(error))
 }
 
 function getToken({ secret, service }: { secret: string; service: string }) {
