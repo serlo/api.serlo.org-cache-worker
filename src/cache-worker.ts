@@ -55,12 +55,12 @@ export class CacheWorker {
     apiEndpoint,
     service,
     secret,
-    pagination = 100,
+    pagination,
   }: {
     apiEndpoint: string
     service: string
     secret: string
-    pagination?: number
+    pagination: number
   }) {
     this.grahQLClient = new GraphQLClient(apiEndpoint, {
       headers: {

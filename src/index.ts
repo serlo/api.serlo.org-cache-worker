@@ -27,14 +27,9 @@ import { CacheWorker } from './cache-worker'
 void start()
 
 async function start() {
-  let pagination =
-    process.env.PAGINATION === undefined
-      ? undefined
-      : parseInt(process.env.PAGINATION)
-  if (Number.isNaN(pagination)) {
-    pagination = undefined
-  }
-  if (pagination !== undefined && pagination <= 0) {
+  let pagination = parseInt(process.env.PAGINATION ?? '100')
+
+  if (Number.isNaN(pagination) || pagination <= 0) {
     throw new Error('pagination has to be a positive number')
   }
 
