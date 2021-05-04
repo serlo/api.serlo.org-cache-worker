@@ -120,14 +120,15 @@ export class CacheWorker {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
     const query = gql`
-      mutation($input: CacheRemoveInput!) {
+      mutation($cacheUpdate: CacheRemoveInput!) {
         _cache {
-          remove(input: $input)
-          success
+          update(input: $cacheUpdate) {
+            success
+          }
         }
       }
     `
-    const variables = { cacheKeys }
+    const variables = { input: { keys: cacheKeys } }
     return this.grahQLClient.request(query, variables)
   }
 
