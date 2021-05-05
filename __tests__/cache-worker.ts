@@ -72,7 +72,7 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
 
   global.server.use(
     graphql.link(apiEndpoint).mutation('_cache', (req, res, ctx) => {
-      const cacheKeys = req.body?.variables!.CacheRemoveInput.cacheKeys as string[]
+      const cacheKeys = req.body?.variables!.cacheUpdate.keys as string[]
 
       if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
         if (numberOfRetries >= maxRetriesBeforeWorking) {

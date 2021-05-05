@@ -128,7 +128,7 @@ export class CacheWorker {
         }
       }
     `
-    const variables = { input: { keys: cacheKeys } }
+    const variables = { cacheUpdate: { keys: cacheKeys } }
     return this.grahQLClient.request(query, variables)
   }
 
