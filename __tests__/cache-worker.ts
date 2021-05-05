@@ -71,7 +71,8 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
   let numberOfRetries = 0
 
   global.server.use(
-    graphql.link(apiEndpoint).mutation('_cache', (req, res, ctx) => {
+    graphql.link(apiEndpoint).mutation('UpdateCache', (req, res, ctx) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const cacheKeys = req.body?.variables!.cacheUpdate.keys as string[]
 
       if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
