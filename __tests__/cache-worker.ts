@@ -71,18 +71,22 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
   let numberOfRetries = 0
 
   global.server.use(
-    graphql.link(apiEndpoint).mutation('UpdateCache', (req, res, ctx) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const cacheKeys = req.body?.variables!.cacheUpdate.keys as string[]
+    graphql
+      .link(apiEndpoint)
+      .mutation<
+        { _cache: { update: { success: boolean } } },
+        { cacheUpdate: { keys: string[] } }
+      >('UpdateCache', (req, res, ctx) => {
+        const cacheKeys = req.variables.cacheUpdate.keys
 
-      if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
-        if (numberOfRetries >= maxRetriesBeforeWorking) {
-          numberOfRetries++
+        if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
+          if (numberOfRetries >= maxRetriesBeforeWorking) {
+            numberOfRetries++
 
-          return res(ctx.errors([{ message: `An error occurred` }]))
+            return res(ctx.errors([{ message: `An error occurred` }]))
+          }
         }
-      }
-      return res(ctx.data({ data: { _cache: { update: { success: true } } } }))
-    })
+        return res(ctx.data({ _cache: { update: { success: true } } }))
+      })
   )
 }
