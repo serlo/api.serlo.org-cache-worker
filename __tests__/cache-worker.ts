@@ -76,7 +76,7 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
       .mutation<
         { _cache: { update: { success: boolean } } },
         { cacheUpdate: { keys: string[] } }
-      >('UpdateCache', (req, res, ctx) => {
+      >('updateCache', (req, res, ctx) => {
         const cacheKeys = req.variables.cacheUpdate.keys
 
         if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
