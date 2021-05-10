@@ -68,7 +68,7 @@ export class CacheWorker {
 
   /**
    * Requests Serlo's API to update its cache according to chosen keys.
-   * @param keys an array of keys(strings) whose values should to be cached
+   * @param keys an array of keys(strings) whose values should be cached
    */
   public async update(keys: string[]): Promise<ErrorResult[]> {
     if (keys.length === 0) {
@@ -120,11 +120,13 @@ export class CacheWorker {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
     const query = gql`
-      mutation _updateCache($cacheKeys: [String!]!) {
-        _updateCache(keys: $cacheKeys)
+      mutation updateCache($cacheUpdate: CacheRemoveInput!) {
+        update(input: $cacheUpdate) {
+          success
+        }
       }
     `
-    const variables = { cacheKeys }
+    const variables = { cacheUpdate: { keys: cacheKeys } }
     return this.grahQLClient.request(query, variables)
   }
 

@@ -39,7 +39,7 @@ beforeEach(() => {
 })
 
 describe('Update-cache worker', () => {
-  test('successfully calls _updateCache', async () => {
+  test('successfully calls _cache', async () => {
     setUpErrorsAtApi([])
 
     const errors = await cacheWorker.update(fakeCacheKeys)
@@ -71,18 +71,22 @@ function setUpErrorsAtApi(wrongKeys: string[], maxRetriesBeforeWorking = 0) {
   let numberOfRetries = 0
 
   global.server.use(
-    graphql.link(apiEndpoint).mutation('_updateCache', (req, res, ctx) => {
-      const cacheKeys = req.body?.variables!.cacheKeys as string[]
+    graphql
+      .link(apiEndpoint)
+      .mutation<
+        { _cache: { update: { success: boolean } } },
+        { cacheUpdate: { keys: string[] } }
+      >('updateCache', (req, res, ctx) => {
+        const cacheKeys = req.variables.cacheUpdate.keys
 
-      if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
-        if (numberOfRetries >= maxRetriesBeforeWorking) {
-          numberOfRetries++
+        if (wrongKeys.some((wrongKey) => cacheKeys.includes(wrongKey))) {
+          if (numberOfRetries >= maxRetriesBeforeWorking) {
+            numberOfRetries++
 
-          return res(ctx.errors([{ message: `An error occurred` }]))
+            return res(ctx.errors([{ message: `An error occurred` }]))
+          }
         }
-      }
-
-      return res(ctx.data({ data: { _updateCache: null } }))
-    })
+        return res(ctx.data({ _cache: { update: { success: true } } }))
+      })
   )
 }
