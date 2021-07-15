@@ -41,7 +41,7 @@ async function start() {
     waitTime: 1,
   })
 
-  const cacheKeysPath = path.join(__dirname, 'cache-keys.json')
+  const cacheKeysPath = path.join(__dirname, 'config', 'cache-keys.json')
   const data = fs.readFileSync(cacheKeysPath, 'utf8')
   const cacheKeys = JSON.parse(data) as string[]
 
