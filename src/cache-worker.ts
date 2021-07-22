@@ -120,7 +120,7 @@ export class CacheWorker {
       throw new Error('EmptyCacheKeysError: no cache key was provided')
     }
     const query = gql`
-      mutation updateCacheFromCacheWorker($cacheUpdate: CacheRemoveInput!) {
+      mutation updateCacheFromCacheWorker($cacheUpdate: CacheUpdateInput!) {
         _cache {
           update(input: $cacheUpdate) {
             success
